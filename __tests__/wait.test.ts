@@ -7,8 +7,8 @@ import { expect } from '@jest/globals'
 
 describe('wait.ts', () => {
   it('throws an invalid number', async () => {
-    const input = parseInt('foo', 10)
-    expect(isNaN(input)).toBe(true)
+    const input = Number.parseInt('foo', 10)
+    expect(Number.isNaN(input)).toBe(true)
 
     await expect(wait(input)).rejects.toThrow('milliseconds not a number')
   })
