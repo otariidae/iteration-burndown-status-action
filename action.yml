@@ -19,10 +19,10 @@ inputs:
     required: true
 
 outputs:
-  remainingPoints:
+  remaining-points:
     description:
       sum of points of remaining project items in the current iteration
-  totalPoints:
+  total-points:
     description: sum of points of all project items in the current iteration
 
 runs:

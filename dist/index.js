@@ -40580,8 +40580,8 @@ async function run() {
         const projectNumber = Number.parseInt(core.getInput('project-number'), 10);
         const octokit = github.getOctokit(githubToken);
         const { remainingPoints, totalPoints } = await calcSprintBurndownPoints(octokit, loginName, projectNumber);
-        core.setOutput('remainingPoints', remainingPoints.toString());
-        core.setOutput('totalPoints', totalPoints.toString());
+        core.setOutput('remaining-points', remainingPoints.toString());
+        core.setOutput('total-points', totalPoints.toString());
     }
     catch (error) {
         // Fail the workflow run if an error occurs

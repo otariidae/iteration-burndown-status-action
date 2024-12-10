@@ -124,8 +124,8 @@ describe('action', () => {
 
       await run()
 
-      expect(outputs.remainingPoints).toBe('0')
-      expect(outputs.totalPoints).toBe('0')
+      expect(outputs['remaining-points']).toBe('0')
+      expect(outputs['total-points']).toBe('0')
       expect(setFailedMock).not.toHaveBeenCalled()
     })
   })
@@ -142,8 +142,8 @@ describe('action', () => {
 
       await run()
 
-      expect(outputs.remainingPoints).toBe('2')
-      expect(outputs.totalPoints).toBe('5')
+      expect(outputs['remaining-points']).toBe('2')
+      expect(outputs['total-points']).toBe('5')
       expect(setFailedMock).not.toHaveBeenCalled()
     })
   })
@@ -155,8 +155,8 @@ describe('action', () => {
 
       await run()
 
-      expect(outputs.remainingPoints).toBe('0')
-      expect(outputs.totalPoints).toBe('0')
+      expect(outputs['remaining-points']).toBe('0')
+      expect(outputs['total-points']).toBe('0')
       expect(setFailedMock).not.toHaveBeenCalled()
     })
   })
@@ -225,8 +225,8 @@ describe('action', () => {
 
       await run()
 
-      expect(outputs.remainingPoints).toBe('1')
-      expect(outputs.totalPoints).toBe('3')
+      expect(outputs['remaining-points']).toBe('1')
+      expect(outputs['total-points']).toBe('3')
       expect(setFailedMock).not.toHaveBeenCalled()
     })
   })

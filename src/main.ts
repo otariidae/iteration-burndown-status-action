@@ -165,8 +165,8 @@ export async function run(): Promise<void> {
       loginName,
       projectNumber
     )
-    core.setOutput('remainingPoints', remainingPoints.toString())
-    core.setOutput('totalPoints', totalPoints.toString())
+    core.setOutput('remaining-points', remainingPoints.toString())
+    core.setOutput('total-points', totalPoints.toString())
   } catch (error) {
     // Fail the workflow run if an error occurs
     if (error instanceof Error) core.setFailed(error.message)
