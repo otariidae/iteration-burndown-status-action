@@ -24,7 +24,7 @@
     "ci-test": "npx jest",
     "coverage": "npx make-coverage-badge --output-path ./badges/coverage.svg",
     "format:write": "biome format --write",
-    "format:check": "npx format",
+    "format:check": "biome format",
     "lint": "biome lint",
     "local-action": "npx local-action . src/main.ts .env",
     "package": "npx ncc build src/index.ts -o dist --source-map --license licenses.txt",
