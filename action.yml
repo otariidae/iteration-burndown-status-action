@@ -11,6 +11,12 @@ inputs:
   github-token:
     description: a GitHub token with read access to the project
     required: true
+  login-name:
+    description: organization name
+    required: true
+  project-number:
+    description: project number
+    required: true
 
 outputs:
   remainingPoints:
