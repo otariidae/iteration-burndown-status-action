@@ -15,7 +15,7 @@ type ProjectV2Item =
     }
   | { type: 'REDACTED' }
 
-type GetProjectItemsQuery = {
+export type GetProjectItemsQuery = {
   organization: {
     projectV2: {
       items: {
@@ -30,10 +30,10 @@ type GetProjectItemsQuery = {
 }
 
 const GetProjectItemsQuery = /* GraphQL */ `
-  query GetProjectItems($login: String!, $number: Int!) {
+  query GetProjectItems($login: String!, $number: Int!, $cursor: String) {
     organization(login: $login) {
       projectV2(number: $number) {
-        items(first: 10) {
+        items(first: 100, after: $cursor) {
           pageInfo {
             hasNextPage
             endCursor
@@ -64,30 +64,62 @@ const GetProjectItemsQuery = /* GraphQL */ `
   }
 `
 
+async function* fetchAllProjectItems(
+  octokit: ReturnType<typeof github.getOctokit>,
+  loginName: string,
+  projectNumber: number,
+  cursor?: string
+): AsyncIterable<ProjectV2Item> {
+  const variables = { login: loginName, number: projectNumber, cursor }
+  const response = await octokit.graphql<GetProjectItemsQuery>(
+    GetProjectItemsQuery,
+    variables
+  )
+  // if (cursor) {
+  //   console.log(response.organization?.projectV2?.items)
+  // }
+  if (!response.organization?.projectV2?.items.nodes) {
+    return
+  }
+  yield* response.organization.projectV2.items.nodes
+  if (!response.organization.projectV2.items.pageInfo.hasNextPage) {
+    return
+  }
+  yield* fetchAllProjectItems(
+    octokit,
+    loginName,
+    projectNumber,
+    response.organization.projectV2.items.pageInfo.endCursor
+  )
+}
+
+// polyfill for Array.fromAsync
+async function arrayFromAsync<T>(
+  asyncIterable: AsyncIterable<T>
+): Promise<T[]> {
+  const items = [] as T[]
+  for await (const item of asyncIterable) {
+    items.push(item)
+  }
+  return items
+}
+
 async function calcSprintBurndownPoints(
   octokit: ReturnType<typeof github.getOctokit>,
   loginName: string,
   projectNumber: number
 ) {
-  const response = await octokit.graphql<GetProjectItemsQuery>(
-    GetProjectItemsQuery,
-    {
-      login: loginName,
-      number: projectNumber
-    }
+  const items = await arrayFromAsync(
+    fetchAllProjectItems(octokit, loginName, projectNumber)
   )
 
-  if (!response.organization?.projectV2?.items.nodes) {
-    throw new Error('No project items')
-  }
-
-  if (response.organization.projectV2.items.nodes.length === 0) {
+  if (items.length === 0) {
     return { remainingPoints: 0, totalPoints: 0 }
   }
 
   const today = LocalDate.now()
 
-  const currentSprintItems = response.organization.projectV2.items.nodes
+  const currentSprintItems = items
     .filter(item => item.type !== 'REDACTED')
     .filter(item => {
       if (item.sprintField === null) {

@@ -8,13 +8,17 @@
 
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import * as main from '../src/main'
+import { type GetProjectItemsQuery, run } from '../src/main'
 import { LocalDate } from '@js-joda/core'
 
-const GRAPHQL_RESPONSE = {
+const GRAPHQL_RESPONSE: GetProjectItemsQuery = {
   organization: {
     projectV2: {
       items: {
+        pageInfo: {
+          hasNextPage: false,
+          endCursor: 'Mw'
+        },
         nodes: [
           {
             type: 'ISSUE',
@@ -102,17 +106,23 @@ describe('action', () => {
 
   describe('with empty items', () => {
     it('sets output without fails', async () => {
-      stubGithubGraphql({
-        organization: {
-          projectV2: {
-            items: {
-              nodes: []
+      stubGithubGraphql([
+        {
+          organization: {
+            projectV2: {
+              items: {
+                pageInfo: {
+                  hasNextPage: false,
+                  endCursor: 'Mw'
+                },
+                nodes: []
+              }
             }
           }
         }
-      })
+      ])
 
-      await main.run()
+      await run()
 
       expect(outputs.remainingPoints).toBe('0')
       expect(outputs.totalPoints).toBe('0')
@@ -128,9 +138,9 @@ describe('action', () => {
   ])('with some items in current sprint', dateString => {
     it('sets output without fails on the first day', async () => {
       mockNow(LocalDate.parse(dateString))
-      stubGithubGraphql(GRAPHQL_RESPONSE)
+      stubGithubGraphql([GRAPHQL_RESPONSE])
 
-      await main.run()
+      await run()
 
       expect(outputs.remainingPoints).toBe('2')
       expect(outputs.totalPoints).toBe('5')
@@ -141,12 +151,82 @@ describe('action', () => {
   describe('with 0 items in current sprint', () => {
     it('sets output without fails', async () => {
       mockNow(LocalDate.of(2024, 12, 5))
-      stubGithubGraphql(GRAPHQL_RESPONSE)
+      stubGithubGraphql([GRAPHQL_RESPONSE])
 
-      await main.run()
+      await run()
 
       expect(outputs.remainingPoints).toBe('0')
       expect(outputs.totalPoints).toBe('0')
+      expect(setFailedMock).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('with pagination', () => {
+    it('sets output without fails', async () => {
+      mockNow(LocalDate.of(2024, 12, 10))
+      stubGithubGraphql([
+        {
+          organization: {
+            projectV2: {
+              items: {
+                pageInfo: {
+                  hasNextPage: true,
+                  endCursor: 'Mw'
+                },
+                nodes: [
+                  {
+                    type: 'ISSUE',
+                    pointField: {
+                      number: 2
+                    },
+                    sprintField: {
+                      iterationId: '1234abcd',
+                      startDate: '2024-12-06',
+                      duration: 14
+                    },
+                    statusField: {
+                      name: 'Done'
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          organization: {
+            projectV2: {
+              items: {
+                pageInfo: {
+                  hasNextPage: false,
+                  endCursor: 'Mm'
+                },
+                nodes: [
+                  {
+                    type: 'ISSUE',
+                    pointField: {
+                      number: 1
+                    },
+                    sprintField: {
+                      iterationId: '1234abcd',
+                      startDate: '2024-12-06',
+                      duration: 14
+                    },
+                    statusField: {
+                      name: 'In Progress'
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ])
+
+      await run()
+
+      expect(outputs.remainingPoints).toBe('1')
+      expect(outputs.totalPoints).toBe('3')
       expect(setFailedMock).not.toHaveBeenCalled()
     })
   })
@@ -164,8 +244,12 @@ function mockNow(date: LocalDate) {
   jest.spyOn(LocalDate, 'now').mockReturnValue(date)
 }
 
-function stubGithubGraphql(data: unknown) {
-  const mockOctokitGraphql = jest.fn().mockReturnValue(data)
+function stubGithubGraphql(responses: GetProjectItemsQuery[]) {
+  let mockOctokitGraphql = jest.fn()
+  for (const response of responses) {
+    mockOctokitGraphql = mockOctokitGraphql.mockReturnValueOnce(response)
+  }
+
   jest.spyOn(github, 'getOctokit').mockReturnValue({
     graphql: mockOctokitGraphql
   } as unknown as ReturnType<typeof github.getOctokit>)
