@@ -40514,9 +40514,6 @@ const GetProjectItemsQuery = /* GraphQL */ `
 async function* fetchAllProjectItems(octokit, loginName, projectNumber, cursor) {
     const variables = { login: loginName, number: projectNumber, cursor };
     const response = await octokit.graphql(GetProjectItemsQuery, variables);
-    // if (cursor) {
-    //   console.log(response.organization?.projectV2?.items)
-    // }
     if (!response.organization?.projectV2?.items.nodes) {
         return;
     }

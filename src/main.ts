@@ -75,9 +75,6 @@ async function* fetchAllProjectItems(
     GetProjectItemsQuery,
     variables
   )
-  // if (cursor) {
-  //   console.log(response.organization?.projectV2?.items)
-  // }
   if (!response.organization?.projectV2?.items.nodes) {
     return
   }
