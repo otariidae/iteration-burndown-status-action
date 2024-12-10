@@ -5,6 +5,7 @@
 [![CodeQL](https://github.com/otariidae/iteration-burndown-status-action/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/otariidae/iteration-burndown-status-action/actions/workflows/codeql-analysis.yml)
 [![Coverage](./badges/coverage.svg)](./badges/coverage.svg)
 
-This action outputs the burndown status of the current iteration in GitHub Projects.
+This action outputs the burndown status of the current iteration in GitHub
+Projects.
 
 See action.yml for interface details.
