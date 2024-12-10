@@ -128,7 +128,11 @@ export async function run(): Promise<void> {
     const loginName = core.getInput('login-name')
     const projectNumber = Number.parseInt(core.getInput('project-number'), 10)
     const octokit = github.getOctokit(githubToken)
-    const { remainingPoints, totalPoints } = await calcSprintBurndownPoints(octokit, loginName, projectNumber)
+    const { remainingPoints, totalPoints } = await calcSprintBurndownPoints(
+      octokit,
+      loginName,
+      projectNumber
+    )
     core.setOutput('remainingPoints', remainingPoints.toString())
     core.setOutput('totalPoints', totalPoints.toString())
   } catch (error) {
