@@ -1,23 +1,29 @@
-name: 'The name of your action here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: iteration burndown status action
+description: provide burndown status of the current iteration in GitHub Project
+author: otariidae
 
 # Add your action's branding here. This will appear on the GitHub Marketplace.
 branding:
   icon: 'heart'
   color: 'red'
 
-# Define your inputs here.
 inputs:
-  milliseconds:
-    description: 'Your input description here'
+  github-token:
+    description: a GitHub token with read access to the project
     required: true
-    default: '1000'
+  login-name:
+    description: organization name
+    required: true
+  project-number:
+    description: project number
+    required: true
 
-# Define your outputs here.
 outputs:
-  time:
-    description: 'Your output description here'
+  remaining-points:
+    description:
+      sum of points of remaining project items in the current iteration
+  total-points:
+    description: sum of points of all project items in the current iteration
 
 runs:
   using: node20

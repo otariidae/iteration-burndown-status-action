@@ -7,83 +7,250 @@
  */
 
 import * as core from '@actions/core'
-import * as main from '../src/main'
+import * as github from '@actions/github'
+import { type GetProjectItemsQuery, run } from '../src/main'
+import { LocalDate } from '@js-joda/core'
 
-// Mock the action's main function
-const runMock = jest.spyOn(main, 'run')
-
-// Other utilities
-const timeRegex = /^\d{2}:\d{2}:\d{2}/
-
-// Mock the GitHub Actions core library
-let debugMock: jest.SpiedFunction<typeof core.debug>
-let errorMock: jest.SpiedFunction<typeof core.error>
-let getInputMock: jest.SpiedFunction<typeof core.getInput>
-let setFailedMock: jest.SpiedFunction<typeof core.setFailed>
-let setOutputMock: jest.SpiedFunction<typeof core.setOutput>
+const GRAPHQL_RESPONSE: GetProjectItemsQuery = {
+  organization: {
+    projectV2: {
+      items: {
+        pageInfo: {
+          hasNextPage: false,
+          endCursor: 'Mw'
+        },
+        nodes: [
+          {
+            type: 'ISSUE',
+            pointField: {
+              number: 2
+            },
+            sprintField: {
+              iterationId: '1234abcd',
+              startDate: '2024-12-06',
+              duration: 14
+            },
+            statusField: {
+              name: 'In Progress'
+            }
+          },
+          {
+            type: 'ISSUE',
+            pointField: {
+              number: 3
+            },
+            sprintField: {
+              iterationId: '1234abcd',
+              startDate: '2024-12-06',
+              duration: 14
+            },
+            statusField: {
+              name: 'Done'
+            }
+          },
+          {
+            type: 'ISSUE',
+            pointField: null,
+            sprintField: {
+              iterationId: '1234abcd',
+              startDate: '2024-12-06',
+              duration: 14
+            },
+            statusField: {
+              name: 'Done'
+            }
+          },
+          {
+            type: 'PULL_REQUEST',
+            pointField: {
+              number: 3
+            },
+            sprintField: {
+              iterationId: '5678efgh',
+              startDate: '2024-12-20',
+              duration: 7
+            },
+            statusField: {
+              name: 'Done'
+            }
+          },
+          {
+            type: 'DRAFT_ISSUE',
+            pointField: {
+              number: 3
+            },
+            sprintField: null,
+            statusField: {
+              name: 'Product Backlog'
+            }
+          },
+          { type: 'REDACTED' }
+        ]
+      }
+    }
+  }
+}
 
 describe('action', () => {
+  let outputs: Record<string, string> = {}
+  let setFailedMock: jest.SpiedFunction<typeof core.setFailed>
+
   beforeEach(() => {
-    jest.clearAllMocks()
-
-    debugMock = jest.spyOn(core, 'debug').mockImplementation()
-    errorMock = jest.spyOn(core, 'error').mockImplementation()
-    getInputMock = jest.spyOn(core, 'getInput').mockImplementation()
-    setFailedMock = jest.spyOn(core, 'setFailed').mockImplementation()
-    setOutputMock = jest.spyOn(core, 'setOutput').mockImplementation()
+    outputs = mockSetOutput()
+    setFailedMock = jest.spyOn(core, 'setFailed')
   })
 
-  it('sets the time output', async () => {
-    // Set the action's inputs as return values from core.getInput()
-    getInputMock.mockImplementation(name => {
-      switch (name) {
-        case 'milliseconds':
-          return '500'
-        default:
-          return ''
-      }
-    })
-
-    await main.run()
-    expect(runMock).toHaveReturned()
-
-    // Verify that all of the core library functions were called correctly
-    expect(debugMock).toHaveBeenNthCalledWith(1, 'Waiting 500 milliseconds ...')
-    expect(debugMock).toHaveBeenNthCalledWith(
-      2,
-      expect.stringMatching(timeRegex)
-    )
-    expect(debugMock).toHaveBeenNthCalledWith(
-      3,
-      expect.stringMatching(timeRegex)
-    )
-    expect(setOutputMock).toHaveBeenNthCalledWith(
-      1,
-      'time',
-      expect.stringMatching(timeRegex)
-    )
-    expect(errorMock).not.toHaveBeenCalled()
+  afterEach(() => {
+    jest.restoreAllMocks()
   })
 
-  it('sets a failed status', async () => {
-    // Set the action's inputs as return values from core.getInput()
-    getInputMock.mockImplementation(name => {
-      switch (name) {
-        case 'milliseconds':
-          return 'this is not a number'
-        default:
-          return ''
-      }
+  describe('with empty items', () => {
+    it('sets output without fails', async () => {
+      stubGithubGraphql([
+        {
+          organization: {
+            projectV2: {
+              items: {
+                pageInfo: {
+                  hasNextPage: false,
+                  endCursor: 'Mw'
+                },
+                nodes: []
+              }
+            }
+          }
+        }
+      ])
+
+      await run()
+
+      expect(outputs['remaining-points']).toBe('0')
+      expect(outputs['total-points']).toBe('0')
+      expect(setFailedMock).not.toHaveBeenCalled()
     })
+  })
 
-    await main.run()
-    expect(runMock).toHaveReturned()
+  describe.each([
+    '2024-12-06', // first day of sprint
+    '2024-12-07', // holiday
+    '2024-12-09', // next weekday
+    '2024-12-19' // last day
+  ])('with some items in current sprint', dateString => {
+    it('sets output without fails on the first day', async () => {
+      mockNow(LocalDate.parse(dateString))
+      stubGithubGraphql([GRAPHQL_RESPONSE])
 
-    // Verify that all of the core library functions were called correctly
-    expect(setFailedMock).toHaveBeenNthCalledWith(
-      1,
-      'milliseconds not a number'
-    )
-    expect(errorMock).not.toHaveBeenCalled()
+      await run()
+
+      expect(outputs['remaining-points']).toBe('2')
+      expect(outputs['total-points']).toBe('5')
+      expect(setFailedMock).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('with 0 items in current sprint', () => {
+    it('sets output without fails', async () => {
+      mockNow(LocalDate.of(2024, 12, 5))
+      stubGithubGraphql([GRAPHQL_RESPONSE])
+
+      await run()
+
+      expect(outputs['remaining-points']).toBe('0')
+      expect(outputs['total-points']).toBe('0')
+      expect(setFailedMock).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('with pagination', () => {
+    it('sets output without fails', async () => {
+      mockNow(LocalDate.of(2024, 12, 10))
+      stubGithubGraphql([
+        {
+          organization: {
+            projectV2: {
+              items: {
+                pageInfo: {
+                  hasNextPage: true,
+                  endCursor: 'Mw'
+                },
+                nodes: [
+                  {
+                    type: 'ISSUE',
+                    pointField: {
+                      number: 2
+                    },
+                    sprintField: {
+                      iterationId: '1234abcd',
+                      startDate: '2024-12-06',
+                      duration: 14
+                    },
+                    statusField: {
+                      name: 'Done'
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          organization: {
+            projectV2: {
+              items: {
+                pageInfo: {
+                  hasNextPage: false,
+                  endCursor: 'Mm'
+                },
+                nodes: [
+                  {
+                    type: 'ISSUE',
+                    pointField: {
+                      number: 1
+                    },
+                    sprintField: {
+                      iterationId: '1234abcd',
+                      startDate: '2024-12-06',
+                      duration: 14
+                    },
+                    statusField: {
+                      name: 'In Progress'
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ])
+
+      await run()
+
+      expect(outputs['remaining-points']).toBe('1')
+      expect(outputs['total-points']).toBe('3')
+      expect(setFailedMock).not.toHaveBeenCalled()
+    })
   })
 })
+
+function mockSetOutput(): Record<string, string> {
+  const dummyOutputs: Record<string, string> = {}
+  jest.spyOn(core, 'setOutput').mockImplementation((name, value) => {
+    dummyOutputs[name] = value
+  })
+  return dummyOutputs
+}
+
+function mockNow(date: LocalDate) {
+  jest.spyOn(LocalDate, 'now').mockReturnValue(date)
+}
+
+function stubGithubGraphql(responses: GetProjectItemsQuery[]) {
+  let mockOctokitGraphql = jest.fn()
+  for (const response of responses) {
+    mockOctokitGraphql = mockOctokitGraphql.mockReturnValueOnce(response)
+  }
+
+  jest.spyOn(github, 'getOctokit').mockReturnValue({
+    graphql: mockOctokitGraphql
+  } as unknown as ReturnType<typeof github.getOctokit>)
+}
