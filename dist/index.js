@@ -40538,8 +40538,8 @@ async function calcSprintBurndownPoints(octokit, loginName, projectNumber) {
     }
     const today = core_1.LocalDate.now();
     const currentSprintItems = items
-        .filter(item => item.type !== 'REDACTED')
-        .filter(item => {
+        .filter((item) => item.type !== 'REDACTED')
+        .filter((item) => {
         if (item.sprintField === null) {
             return false;
         }

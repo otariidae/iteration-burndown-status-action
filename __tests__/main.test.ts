@@ -135,7 +135,7 @@ describe('action', () => {
     '2024-12-07', // holiday
     '2024-12-09', // next weekday
     '2024-12-19' // last day
-  ])('with some items in current sprint', dateString => {
+  ])('with some items in current sprint', (dateString) => {
     it('sets output without fails on the first day', async () => {
       mockNow(LocalDate.parse(dateString))
       stubGithubGraphql([GRAPHQL_RESPONSE])

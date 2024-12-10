@@ -117,8 +117,8 @@ async function calcSprintBurndownPoints(
   const today = LocalDate.now()
 
   const currentSprintItems = items
-    .filter(item => item.type !== 'REDACTED')
-    .filter(item => {
+    .filter((item) => item.type !== 'REDACTED')
+    .filter((item) => {
       if (item.sprintField === null) {
         return false
       }
