@@ -40478,7 +40478,14 @@ const core = __importStar(__nccwpck_require__(7484));
 const github = __importStar(__nccwpck_require__(3228));
 const core_1 = __nccwpck_require__(7095);
 const GetProjectItemsQuery = /* GraphQL */ `
-  query GetProjectItems($login: String!, $number: Int!, $cursor: String) {
+  query GetProjectItems(
+    $login: String!,
+    $number: Int!,
+    $pointFieldName: String!,
+    $sprintFieldName: String!,
+    $statusFieldName: String!,
+    $cursor: String
+  ) {
     organization(login: $login) {
       projectV2(number: $number) {
         items(first: 100, after: $cursor) {
@@ -40488,19 +40495,19 @@ const GetProjectItemsQuery = /* GraphQL */ `
           }
           nodes {
             type
-            pointField: fieldValueByName(name: "point") {
+            pointField: fieldValueByName(name: $pointFieldName) {
               ... on ProjectV2ItemFieldNumberValue {
                 number
               }
             }
-            sprintField: fieldValueByName(name: "sprint") {
+            sprintField: fieldValueByName(name: $sprintFieldName) {
               ... on ProjectV2ItemFieldIterationValue {
                 iterationId
                 startDate
                 duration
               }
             }
-            statusField: fieldValueByName(name: "Status") {
+            statusField: fieldValueByName(name: $statusFieldName) {
               ... on ProjectV2ItemFieldSingleSelectValue {
                 name
               }
@@ -40511,8 +40518,7 @@ const GetProjectItemsQuery = /* GraphQL */ `
     }
   }
 `;
-async function* fetchAllProjectItems(octokit, loginName, projectNumber, cursor) {
-    const variables = { login: loginName, number: projectNumber, cursor };
+async function* fetchAllProjectItems(octokit, variables) {
     const response = await octokit.graphql(GetProjectItemsQuery, variables);
     if (!response.organization?.projectV2?.items.nodes) {
         return;
@@ -40521,7 +40527,10 @@ async function* fetchAllProjectItems(octokit, loginName, projectNumber, cursor) 
     if (!response.organization.projectV2.items.pageInfo.hasNextPage) {
         return;
     }
-    yield* fetchAllProjectItems(octokit, loginName, projectNumber, response.organization.projectV2.items.pageInfo.endCursor);
+    yield* fetchAllProjectItems(octokit, {
+        ...variables,
+        cursor: response.organization.projectV2.items.pageInfo.endCursor
+    });
 }
 // polyfill for Array.fromAsync
 async function arrayFromAsync(asyncIterable) {
@@ -40531,8 +40540,8 @@ async function arrayFromAsync(asyncIterable) {
     }
     return items;
 }
-async function calcSprintBurndownPoints(octokit, loginName, projectNumber) {
-    const items = await arrayFromAsync(fetchAllProjectItems(octokit, loginName, projectNumber));
+async function calcSprintBurndownPoints(octokit, variables) {
+    const items = await arrayFromAsync(fetchAllProjectItems(octokit, variables));
     if (items.length === 0) {
         return { remainingPoints: 0, totalPoints: 0 };
     }
@@ -40575,8 +40584,17 @@ async function run() {
         const githubToken = core.getInput('github-token');
         const loginName = core.getInput('login-name');
         const projectNumber = Number.parseInt(core.getInput('project-number'), 10);
+        const pointFieldName = core.getInput('point-field-name');
+        const sprintFieldName = core.getInput('sprint-field-name');
+        const statusFieldName = core.getInput('status-field-name');
         const octokit = github.getOctokit(githubToken);
-        const { remainingPoints, totalPoints } = await calcSprintBurndownPoints(octokit, loginName, projectNumber);
+        const { remainingPoints, totalPoints } = await calcSprintBurndownPoints(octokit, {
+            login: loginName,
+            number: projectNumber,
+            pointFieldName,
+            sprintFieldName,
+            statusFieldName
+        });
         core.setOutput('remaining-points', remainingPoints.toString());
         core.setOutput('total-points', totalPoints.toString());
     }
