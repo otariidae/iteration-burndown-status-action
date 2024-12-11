@@ -93,32 +93,21 @@ const GRAPHQL_RESPONSE: GetProjectItemsQuery = {
 
 describe('action', () => {
   let outputs: Record<string, string> = {}
+  let dummyInputs: Record<string, string> = {}
   let setFailedMock: jest.SpiedFunction<typeof core.setFailed>
 
   beforeEach(() => {
     outputs = mockSetOutput()
     setFailedMock = jest.spyOn(core, 'setFailed')
-    jest.spyOn(core, 'getInput').mockImplementation((name: string) => {
-      if (name === 'github-token') {
-        return 'dummy'
-      }
-      if (name === 'login-name') {
-        return 'octocat'
-      }
-      if (name === 'project-number') {
-        return '123'
-      }
-      if (name === 'point-field-name') {
-        return 'points'
-      }
-      if (name === 'iteration-field-name') {
-        return 'Sprint'
-      }
-      if (name === 'status-field-name') {
-        return 'Status'
-      }
-      throw new Error(`Unexpected input name: ${name}`)
-    })
+    dummyInputs = {
+      'github-token': 'dummy',
+      'login-name': 'octocat',
+      'project-number': '123',
+      'point-field-name': 'points',
+      'iteration-field-name': 'Sprint',
+      'status-field-name': 'Status'
+    }
+    mockGetInput(dummyInputs)
   })
 
   afterEach(() => {
@@ -251,6 +240,51 @@ describe('action', () => {
       expect(setFailedMock).not.toHaveBeenCalled()
     })
   })
+
+  describe('with non-numeric project-number', () => {
+    it('fails', async () => {
+      dummyInputs['project-number'] = 'abc'
+      stubGithubGraphql([GRAPHQL_RESPONSE])
+
+      await run()
+
+      expect(outputs).toEqual({})
+      expect(setFailedMock).toHaveBeenCalled()
+    })
+  })
+  describe('with empty point-field-name', () => {
+    it('fails', async () => {
+      dummyInputs['point-field-name'] = ''
+      stubGithubGraphql([GRAPHQL_RESPONSE])
+
+      await run()
+
+      expect(outputs).toEqual({})
+      expect(setFailedMock).toHaveBeenCalled()
+    })
+  })
+  describe('with empty iteration-field-name', () => {
+    it('fails', async () => {
+      dummyInputs['iteration-field-name'] = ''
+      stubGithubGraphql([GRAPHQL_RESPONSE])
+
+      await run()
+
+      expect(outputs).toEqual({})
+      expect(setFailedMock).toHaveBeenCalled()
+    })
+  })
+  describe('with empty status-field-name', () => {
+    it('fails', async () => {
+      dummyInputs['status-field-name'] = ''
+      stubGithubGraphql([GRAPHQL_RESPONSE])
+
+      await run()
+
+      expect(outputs).toEqual({})
+      expect(setFailedMock).toHaveBeenCalled()
+    })
+  })
 })
 
 function mockSetOutput(): Record<string, string> {
@@ -259,6 +293,15 @@ function mockSetOutput(): Record<string, string> {
     dummyOutputs[name] = value
   })
   return dummyOutputs
+}
+
+function mockGetInput(inputs: Record<string, string>) {
+  jest.spyOn(core, 'getInput').mockImplementation((name: string) => {
+    if (inputs[name] === undefined) {
+      throw new Error(`Unexpected input name: ${name}`)
+    }
+    return inputs[name]
+  })
 }
 
 function mockNow(date: LocalDate) {

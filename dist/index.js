@@ -40591,6 +40591,19 @@ async function run() {
         const pointFieldName = core.getInput('point-field-name');
         const iterationFieldName = core.getInput('iteration-field-name');
         const statusFieldName = core.getInput('status-field-name');
+        // validate inputs
+        if (Number.isNaN(projectNumber)) {
+            throw new Error('project-number must be a number');
+        }
+        if (pointFieldName === '') {
+            throw new Error('point-field-name must not be empty');
+        }
+        if (iterationFieldName === '') {
+            throw new Error('iteration-field-name must not be empty');
+        }
+        if (statusFieldName === '') {
+            throw new Error('status-field-name must not be empty');
+        }
         const octokit = github.getOctokit(githubToken);
         const { remainingPoints, totalPoints } = await calcIterationBurndownPoints(octokit, {
             login: loginName,
