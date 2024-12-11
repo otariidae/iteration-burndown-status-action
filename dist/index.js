@@ -40542,9 +40542,7 @@ async function arrayFromAsync(asyncIterable) {
     }
     return items;
 }
-async function calcIterationBurndownPoints(octokit, variables) {
-    const items = await arrayFromAsync(fetchAllProjectItems(octokit, variables));
-    core.info(`Fetched ${items.length} items in total`);
+function calcIterationBurndownPoints(items) {
     if (items.length === 0) {
         return { remainingPoints: 0, totalPoints: 0 };
     }
@@ -40605,13 +40603,14 @@ async function run() {
             throw new Error('status-field-name must not be empty');
         }
         const octokit = github.getOctokit(githubToken);
-        const { remainingPoints, totalPoints } = await calcIterationBurndownPoints(octokit, {
+        const items = await arrayFromAsync(fetchAllProjectItems(octokit, {
             login: loginName,
             number: projectNumber,
             pointFieldName,
             iterationFieldName,
             statusFieldName
-        });
+        }));
+        const { remainingPoints, totalPoints } = await calcIterationBurndownPoints(items);
         core.setOutput('remaining-points', remainingPoints.toString());
         core.setOutput('total-points', totalPoints.toString());
     }
