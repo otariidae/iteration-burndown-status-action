@@ -40581,9 +40581,9 @@ async function calcSprintBurndownPoints(octokit, variables) {
 }
 async function run() {
     try {
-        const githubToken = core.getInput('github-token');
-        const loginName = core.getInput('login-name');
-        const projectNumber = Number.parseInt(core.getInput('project-number'), 10);
+        const githubToken = core.getInput('github-token', { required: true });
+        const loginName = core.getInput('login-name', { required: true });
+        const projectNumber = Number.parseInt(core.getInput('project-number', { required: true }), 10);
         const pointFieldName = core.getInput('point-field-name');
         const sprintFieldName = core.getInput('sprint-field-name');
         const statusFieldName = core.getInput('status-field-name');
