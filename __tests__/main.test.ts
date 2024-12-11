@@ -98,6 +98,27 @@ describe('action', () => {
   beforeEach(() => {
     outputs = mockSetOutput()
     setFailedMock = jest.spyOn(core, 'setFailed')
+    jest.spyOn(core, 'getInput').mockImplementation((name: string) => {
+      if (name === 'github-token') {
+        return 'dummy'
+      }
+      if (name === 'login-name') {
+        return 'octocat'
+      }
+      if (name === 'project-number') {
+        return '123'
+      }
+      if (name === 'point-field-name') {
+        return 'points'
+      }
+      if (name === 'sprint-field-name') {
+        return 'Sprint'
+      }
+      if (name === 'status-field-name') {
+        return 'Status'
+      }
+      throw new Error(`Unexpected input name: ${name}`)
+    })
   })
 
   afterEach(() => {
