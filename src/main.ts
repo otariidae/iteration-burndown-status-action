@@ -84,6 +84,9 @@ async function* fetchAllProjectItems(
   octokit: ReturnType<typeof github.getOctokit>,
   variables: GetProjectItemsQueryVariables
 ): AsyncIterable<ProjectV2Item> {
+  core.info(
+    `Fetching project items with variables: ${JSON.stringify(variables)}`
+  )
   const response = await octokit.graphql<GetProjectItemsQuery>(
     GetProjectItemsQuery,
     variables
@@ -91,6 +94,9 @@ async function* fetchAllProjectItems(
   if (!response.organization?.projectV2?.items.nodes) {
     return
   }
+  core.info(
+    `Fetched ${response.organization.projectV2.items.nodes.length} items`
+  )
   yield* response.organization.projectV2.items.nodes
   if (!response.organization.projectV2.items.pageInfo.hasNextPage) {
     return
@@ -117,6 +123,7 @@ async function calcSprintBurndownPoints(
   variables: GetProjectItemsQueryVariables
 ) {
   const items = await arrayFromAsync(fetchAllProjectItems(octokit, variables))
+  core.info(`Fetched ${items.length} items in total`)
 
   if (items.length === 0) {
     return { remainingPoints: 0, totalPoints: 0 }
@@ -140,6 +147,8 @@ async function calcSprintBurndownPoints(
       }
       return true
     })
+
+  core.info(`Found ${currentSprintItems.length} items in the current sprint`)
 
   let remainingPoints = 0
   let totalPoints = 0
