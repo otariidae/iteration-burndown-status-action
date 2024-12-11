@@ -25,7 +25,7 @@ const GRAPHQL_RESPONSE: GetProjectItemsQuery = {
             pointField: {
               number: 2
             },
-            sprintField: {
+            iterationField: {
               iterationId: '1234abcd',
               startDate: '2024-12-06',
               duration: 14
@@ -39,7 +39,7 @@ const GRAPHQL_RESPONSE: GetProjectItemsQuery = {
             pointField: {
               number: 3
             },
-            sprintField: {
+            iterationField: {
               iterationId: '1234abcd',
               startDate: '2024-12-06',
               duration: 14
@@ -51,7 +51,7 @@ const GRAPHQL_RESPONSE: GetProjectItemsQuery = {
           {
             type: 'ISSUE',
             pointField: null,
-            sprintField: {
+            iterationField: {
               iterationId: '1234abcd',
               startDate: '2024-12-06',
               duration: 14
@@ -65,7 +65,7 @@ const GRAPHQL_RESPONSE: GetProjectItemsQuery = {
             pointField: {
               number: 3
             },
-            sprintField: {
+            iterationField: {
               iterationId: '5678efgh',
               startDate: '2024-12-20',
               duration: 7
@@ -79,7 +79,7 @@ const GRAPHQL_RESPONSE: GetProjectItemsQuery = {
             pointField: {
               number: 3
             },
-            sprintField: null,
+            iterationField: null,
             statusField: {
               name: 'Product Backlog'
             }
@@ -111,7 +111,7 @@ describe('action', () => {
       if (name === 'point-field-name') {
         return 'points'
       }
-      if (name === 'sprint-field-name') {
+      if (name === 'iteration-field-name') {
         return 'Sprint'
       }
       if (name === 'status-field-name') {
@@ -200,7 +200,7 @@ describe('action', () => {
                     pointField: {
                       number: 2
                     },
-                    sprintField: {
+                    iterationField: {
                       iterationId: '1234abcd',
                       startDate: '2024-12-06',
                       duration: 14
@@ -228,7 +228,7 @@ describe('action', () => {
                     pointField: {
                       number: 1
                     },
-                    sprintField: {
+                    iterationField: {
                       iterationId: '1234abcd',
                       startDate: '2024-12-06',
                       duration: 14

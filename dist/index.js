@@ -40482,7 +40482,7 @@ const GetProjectItemsQuery = /* GraphQL */ `
     $login: String!,
     $number: Int!,
     $pointFieldName: String!,
-    $sprintFieldName: String!,
+    $iterationFieldName: String!,
     $statusFieldName: String!,
     $cursor: String
   ) {
@@ -40500,7 +40500,7 @@ const GetProjectItemsQuery = /* GraphQL */ `
                 number
               }
             }
-            sprintField: fieldValueByName(name: $sprintFieldName) {
+            iterationField: fieldValueByName(name: $iterationFieldName) {
               ... on ProjectV2ItemFieldIterationValue {
                 iterationId
                 startDate
@@ -40542,33 +40542,33 @@ async function arrayFromAsync(asyncIterable) {
     }
     return items;
 }
-async function calcSprintBurndownPoints(octokit, variables) {
+async function calcIterationBurndownPoints(octokit, variables) {
     const items = await arrayFromAsync(fetchAllProjectItems(octokit, variables));
     core.info(`Fetched ${items.length} items in total`);
     if (items.length === 0) {
         return { remainingPoints: 0, totalPoints: 0 };
     }
     const today = core_1.LocalDate.now();
-    const currentSprintItems = items
+    const currentIterationItems = items
         .filter((item) => item.type !== 'REDACTED')
         .filter((item) => {
-        if (item.sprintField === null) {
+        if (item.iterationField === null) {
             return false;
         }
-        const sprintStartDate = core_1.LocalDate.parse(item.sprintField.startDate);
-        const sprintEndDate = sprintStartDate.plusDays(item.sprintField.duration);
-        if (today.isBefore(sprintStartDate)) {
+        const iterationStartDate = core_1.LocalDate.parse(item.iterationField.startDate);
+        const iterationEndDate = iterationStartDate.plusDays(item.iterationField.duration);
+        if (today.isBefore(iterationStartDate)) {
             return false;
         }
-        if (today.isAfter(sprintEndDate)) {
+        if (today.isAfter(iterationEndDate)) {
             return false;
         }
         return true;
     });
-    core.info(`Found ${currentSprintItems.length} items in the current sprint`);
+    core.info(`Found ${currentIterationItems.length} items in the current iteration`);
     let remainingPoints = 0;
     let totalPoints = 0;
-    for (const item of currentSprintItems) {
+    for (const item of currentIterationItems) {
         if (item.pointField === null) {
             continue;
         }
@@ -40589,14 +40589,14 @@ async function run() {
         const loginName = core.getInput('login-name', { required: true });
         const projectNumber = Number.parseInt(core.getInput('project-number', { required: true }), 10);
         const pointFieldName = core.getInput('point-field-name');
-        const sprintFieldName = core.getInput('sprint-field-name');
+        const iterationFieldName = core.getInput('iteration-field-name');
         const statusFieldName = core.getInput('status-field-name');
         const octokit = github.getOctokit(githubToken);
-        const { remainingPoints, totalPoints } = await calcSprintBurndownPoints(octokit, {
+        const { remainingPoints, totalPoints } = await calcIterationBurndownPoints(octokit, {
             login: loginName,
             number: projectNumber,
             pointFieldName,
-            sprintFieldName,
+            iterationFieldName,
             statusFieldName
         });
         core.setOutput('remaining-points', remainingPoints.toString());

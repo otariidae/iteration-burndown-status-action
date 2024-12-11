@@ -6,7 +6,7 @@ type ProjectV2Item =
   | {
       type: 'DRAFT_ISSUE' | 'ISSUE' | 'PULL_REQUEST'
       pointField: { number: number } | null
-      sprintField: {
+      iterationField: {
         iterationId: string
         startDate: string
         duration: number
@@ -34,7 +34,7 @@ const GetProjectItemsQuery = /* GraphQL */ `
     $login: String!,
     $number: Int!,
     $pointFieldName: String!,
-    $sprintFieldName: String!,
+    $iterationFieldName: String!,
     $statusFieldName: String!,
     $cursor: String
   ) {
@@ -52,7 +52,7 @@ const GetProjectItemsQuery = /* GraphQL */ `
                 number
               }
             }
-            sprintField: fieldValueByName(name: $sprintFieldName) {
+            iterationField: fieldValueByName(name: $iterationFieldName) {
               ... on ProjectV2ItemFieldIterationValue {
                 iterationId
                 startDate
@@ -75,7 +75,7 @@ type GetProjectItemsQueryVariables = {
   login: string
   number: number
   pointFieldName: string
-  sprintFieldName: string
+  iterationFieldName: string
   statusFieldName: string
   cursor?: string
 }
@@ -118,7 +118,7 @@ async function arrayFromAsync<T>(
   return items
 }
 
-async function calcSprintBurndownPoints(
+async function calcIterationBurndownPoints(
   octokit: ReturnType<typeof github.getOctokit>,
   variables: GetProjectItemsQueryVariables
 ) {
@@ -131,28 +131,32 @@ async function calcSprintBurndownPoints(
 
   const today = LocalDate.now()
 
-  const currentSprintItems = items
+  const currentIterationItems = items
     .filter((item) => item.type !== 'REDACTED')
     .filter((item) => {
-      if (item.sprintField === null) {
+      if (item.iterationField === null) {
         return false
       }
-      const sprintStartDate = LocalDate.parse(item.sprintField.startDate)
-      const sprintEndDate = sprintStartDate.plusDays(item.sprintField.duration)
-      if (today.isBefore(sprintStartDate)) {
+      const iterationStartDate = LocalDate.parse(item.iterationField.startDate)
+      const iterationEndDate = iterationStartDate.plusDays(
+        item.iterationField.duration
+      )
+      if (today.isBefore(iterationStartDate)) {
         return false
       }
-      if (today.isAfter(sprintEndDate)) {
+      if (today.isAfter(iterationEndDate)) {
         return false
       }
       return true
     })
 
-  core.info(`Found ${currentSprintItems.length} items in the current sprint`)
+  core.info(
+    `Found ${currentIterationItems.length} items in the current iteration`
+  )
 
   let remainingPoints = 0
   let totalPoints = 0
-  for (const item of currentSprintItems) {
+  for (const item of currentIterationItems) {
     if (item.pointField === null) {
       continue
     }
@@ -177,17 +181,17 @@ export async function run(): Promise<void> {
       10
     )
     const pointFieldName = core.getInput('point-field-name')
-    const sprintFieldName = core.getInput('sprint-field-name')
+    const iterationFieldName = core.getInput('iteration-field-name')
     const statusFieldName = core.getInput('status-field-name')
 
     const octokit = github.getOctokit(githubToken)
-    const { remainingPoints, totalPoints } = await calcSprintBurndownPoints(
+    const { remainingPoints, totalPoints } = await calcIterationBurndownPoints(
       octokit,
       {
         login: loginName,
         number: projectNumber,
         pointFieldName,
-        sprintFieldName,
+        iterationFieldName,
         statusFieldName
       }
     )
