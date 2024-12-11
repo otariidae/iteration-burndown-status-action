@@ -30,7 +30,14 @@ export type GetProjectItemsQuery = {
 }
 
 const GetProjectItemsQuery = /* GraphQL */ `
-  query GetProjectItems($login: String!, $number: Int!, $cursor: String) {
+  query GetProjectItems(
+    $login: String!,
+    $number: Int!,
+    $pointFieldName: String!,
+    $sprintFieldName: String!,
+    $statusFieldName: String!,
+    $cursor: String
+  ) {
     organization(login: $login) {
       projectV2(number: $number) {
         items(first: 100, after: $cursor) {
@@ -40,19 +47,19 @@ const GetProjectItemsQuery = /* GraphQL */ `
           }
           nodes {
             type
-            pointField: fieldValueByName(name: "point") {
+            pointField: fieldValueByName(name: $pointFieldName) {
               ... on ProjectV2ItemFieldNumberValue {
                 number
               }
             }
-            sprintField: fieldValueByName(name: "sprint") {
+            sprintField: fieldValueByName(name: $sprintFieldName) {
               ... on ProjectV2ItemFieldIterationValue {
                 iterationId
                 startDate
                 duration
               }
             }
-            statusField: fieldValueByName(name: "Status") {
+            statusField: fieldValueByName(name: $statusFieldName) {
               ... on ProjectV2ItemFieldSingleSelectValue {
                 name
               }
@@ -64,13 +71,19 @@ const GetProjectItemsQuery = /* GraphQL */ `
   }
 `
 
+type GetProjectItemsQueryVariables = {
+  login: string
+  number: number
+  pointFieldName: string
+  sprintFieldName: string
+  statusFieldName: string
+  cursor?: string
+}
+
 async function* fetchAllProjectItems(
   octokit: ReturnType<typeof github.getOctokit>,
-  loginName: string,
-  projectNumber: number,
-  cursor?: string
+  variables: GetProjectItemsQueryVariables
 ): AsyncIterable<ProjectV2Item> {
-  const variables = { login: loginName, number: projectNumber, cursor }
   const response = await octokit.graphql<GetProjectItemsQuery>(
     GetProjectItemsQuery,
     variables
@@ -82,12 +95,10 @@ async function* fetchAllProjectItems(
   if (!response.organization.projectV2.items.pageInfo.hasNextPage) {
     return
   }
-  yield* fetchAllProjectItems(
-    octokit,
-    loginName,
-    projectNumber,
-    response.organization.projectV2.items.pageInfo.endCursor
-  )
+  yield* fetchAllProjectItems(octokit, {
+    ...variables,
+    cursor: response.organization.projectV2.items.pageInfo.endCursor
+  })
 }
 
 // polyfill for Array.fromAsync
@@ -103,12 +114,9 @@ async function arrayFromAsync<T>(
 
 async function calcSprintBurndownPoints(
   octokit: ReturnType<typeof github.getOctokit>,
-  loginName: string,
-  projectNumber: number
+  variables: GetProjectItemsQueryVariables
 ) {
-  const items = await arrayFromAsync(
-    fetchAllProjectItems(octokit, loginName, projectNumber)
-  )
+  const items = await arrayFromAsync(fetchAllProjectItems(octokit, variables))
 
   if (items.length === 0) {
     return { remainingPoints: 0, totalPoints: 0 }
@@ -156,11 +164,20 @@ export async function run(): Promise<void> {
     const githubToken = core.getInput('github-token')
     const loginName = core.getInput('login-name')
     const projectNumber = Number.parseInt(core.getInput('project-number'), 10)
+    const pointFieldName = core.getInput('point-field-name')
+    const sprintFieldName = core.getInput('sprint-field-name')
+    const statusFieldName = core.getInput('status-field-name')
+
     const octokit = github.getOctokit(githubToken)
     const { remainingPoints, totalPoints } = await calcSprintBurndownPoints(
       octokit,
-      loginName,
-      projectNumber
+      {
+        login: loginName,
+        number: projectNumber,
+        pointFieldName,
+        sprintFieldName,
+        statusFieldName
+      }
     )
     core.setOutput('remaining-points', remainingPoints.toString())
     core.setOutput('total-points', totalPoints.toString())

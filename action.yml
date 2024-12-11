@@ -17,6 +17,18 @@ inputs:
   project-number:
     description: project number
     required: true
+  point-field-name:
+    description: field name of estimated story points
+    required: false
+    default: 'points'
+  iteration-field-name:
+    description: field name of iteration
+    required: false
+    default: 'Iteration'
+  status-field-name:
+    description: field name of status
+    required: false
+    default: 'Status'
 
 outputs:
   remaining-points:
