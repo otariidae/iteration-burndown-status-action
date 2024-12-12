@@ -31,7 +31,8 @@ describe('action', () => {
       'project-number': '123',
       'point-field-name': 'points',
       'iteration-field-name': 'Sprint',
-      'status-field-name': 'Status'
+      'status-field-name': 'Status',
+      'grouping-field-name': ''
     }
     mockGetInput(dummyInputs)
   })
@@ -70,7 +71,8 @@ describe('action', () => {
                     },
                     statusField: {
                       name: 'Done'
-                    }
+                    },
+                    groupingField: null
                   },
                   {
                     type: 'ISSUE',
@@ -80,7 +82,8 @@ describe('action', () => {
                     iterationField: ITERATION_2024_12_06,
                     statusField: {
                       name: 'Done'
-                    }
+                    },
+                    groupingField: null
                   },
                   {
                     type: 'ISSUE',
@@ -94,7 +97,8 @@ describe('action', () => {
                     },
                     statusField: {
                       name: 'Done'
-                    }
+                    },
+                    groupingField: null
                   }
                 ]
               }
@@ -132,7 +136,8 @@ describe('action', () => {
                     iterationField: ITERATION_2024_12_06,
                     statusField: {
                       name: 'Done'
-                    }
+                    },
+                    groupingField: null
                   }
                 ]
               }
@@ -156,7 +161,8 @@ describe('action', () => {
                     iterationField: ITERATION_2024_12_06,
                     statusField: {
                       name: 'In Progress'
-                    }
+                    },
+                    groupingField: null
                   }
                 ]
               }
@@ -191,7 +197,8 @@ describe('action', () => {
                     iterationField: ITERATION_2024_12_06,
                     statusField: {
                       name: 'Done'
-                    }
+                    },
+                    groupingField: null
                   },
                   {
                     type: 'ISSUE',
@@ -201,7 +208,8 @@ describe('action', () => {
                     iterationField: ITERATION_2024_12_06,
                     statusField: {
                       name: 'Done'
-                    }
+                    },
+                    groupingField: null
                   }
                 ]
               }
@@ -238,7 +246,8 @@ describe('action', () => {
                     iterationField: null,
                     statusField: {
                       name: 'Done'
-                    }
+                    },
+                    groupingField: null
                   },
                   {
                     type: 'ISSUE',
@@ -248,7 +257,8 @@ describe('action', () => {
                     iterationField: ITERATION_2024_12_06,
                     statusField: {
                       name: 'Done'
-                    }
+                    },
+                    groupingField: null
                   }
                 ]
               }
@@ -261,6 +271,7 @@ describe('action', () => {
 
       expect(outputs['remaining-points']).toBe('0')
       expect(outputs['total-points']).toBe('3')
+      expect(outputs['grouping-results']).toBe('{}')
       expect(setFailedMock).not.toHaveBeenCalled()
     })
   })
@@ -284,7 +295,8 @@ describe('action', () => {
                       number: 2
                     },
                     iterationField: ITERATION_2024_12_06,
-                    statusField: null
+                    statusField: null,
+                    groupingField: null
                   },
                   {
                     type: 'ISSUE',
@@ -294,7 +306,8 @@ describe('action', () => {
                     iterationField: ITERATION_2024_12_06,
                     statusField: {
                       name: 'Done'
-                    }
+                    },
+                    groupingField: null
                   }
                 ]
               }
@@ -307,7 +320,140 @@ describe('action', () => {
 
       expect(outputs['remaining-points']).toBe('2')
       expect(outputs['total-points']).toBe('5')
+      expect(outputs['grouping-results']).toBe('{}')
       expect(setFailedMock).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('with grouping-field-name', () => {
+    it('sums points for each group', async () => {
+      mockNow(LocalDate.of(2024, 12, 10))
+      dummyInputs['grouping-field-name'] = 'Epic'
+      stubGithubGraphql([
+        {
+          organization: {
+            projectV2: {
+              items: {
+                pageInfo: {
+                  hasNextPage: false,
+                  endCursor: 'Mw'
+                },
+                nodes: [
+                  {
+                    type: 'ISSUE',
+                    pointField: {
+                      number: 2
+                    },
+                    iterationField: ITERATION_2024_12_06,
+                    statusField: {
+                      name: 'In Progress'
+                    },
+                    groupingField: {
+                      name: 'Epic1'
+                    }
+                  },
+                  {
+                    type: 'ISSUE',
+                    pointField: {
+                      number: 3
+                    },
+                    iterationField: ITERATION_2024_12_06,
+                    statusField: {
+                      name: 'Done'
+                    },
+                    groupingField: {
+                      name: 'Epic2'
+                    }
+                  },
+                  {
+                    type: 'ISSUE',
+                    pointField: {
+                      number: 7
+                    },
+                    iterationField: ITERATION_2024_12_06,
+                    statusField: {
+                      name: 'Done'
+                    },
+                    groupingField: {
+                      name: 'Epic1'
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ])
+
+      await run()
+
+      expect(outputs['remaining-points']).toBe('2')
+      expect(outputs['total-points']).toBe('12')
+      expect(outputs['grouping-results']).toBe(
+        JSON.stringify({
+          Epic1: { remainingPoints: 2, totalPoints: 9 },
+          Epic2: { remainingPoints: 0, totalPoints: 3 }
+        })
+      )
+      expect(setFailedMock).not.toHaveBeenCalled()
+    })
+
+    describe('with some null groupingField', () => {
+      it('does not count items in groups with null grouping', async () => {
+        mockNow(LocalDate.of(2024, 12, 10))
+        dummyInputs['grouping-field-name'] = 'Epic'
+        stubGithubGraphql([
+          {
+            organization: {
+              projectV2: {
+                items: {
+                  pageInfo: {
+                    hasNextPage: false,
+                    endCursor: 'Mw'
+                  },
+                  nodes: [
+                    {
+                      type: 'ISSUE',
+                      pointField: {
+                        number: 2
+                      },
+                      iterationField: ITERATION_2024_12_06,
+                      statusField: {
+                        name: 'Done'
+                      },
+                      groupingField: {
+                        name: 'Epic1'
+                      }
+                    },
+                    {
+                      type: 'ISSUE',
+                      pointField: {
+                        number: 3
+                      },
+                      iterationField: ITERATION_2024_12_06,
+                      statusField: {
+                        name: 'In Progress'
+                      },
+                      groupingField: null
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ])
+
+        await run()
+
+        expect(outputs['remaining-points']).toBe('3')
+        expect(outputs['total-points']).toBe('5')
+        expect(outputs['grouping-results']).toBe(
+          JSON.stringify({
+            Epic1: { remainingPoints: 0, totalPoints: 2 }
+          })
+        )
+        expect(setFailedMock).not.toHaveBeenCalled()
+      })
     })
   })
 
@@ -333,6 +479,7 @@ describe('action', () => {
 
       expect(outputs['remaining-points']).toBe('0')
       expect(outputs['total-points']).toBe('0')
+      expect(outputs['grouping-results']).toBe('{}')
       expect(setFailedMock).not.toHaveBeenCalled()
     })
   })
@@ -359,6 +506,7 @@ describe('action', () => {
 
       expect(outputs['remaining-points']).toBe('0')
       expect(outputs['total-points']).toBe('0')
+      expect(outputs['grouping-results']).toBe('{}')
       expect(setFailedMock).not.toHaveBeenCalled()
     })
   })
