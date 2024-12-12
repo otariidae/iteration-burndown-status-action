@@ -133,7 +133,7 @@ function calcIterationBurndownPoints(items: ProjectV2Item[]) {
       }
       const iterationStartDate = LocalDate.parse(item.iterationField.startDate)
       const iterationEndDate = iterationStartDate.plusDays(
-        item.iterationField.duration
+        item.iterationField.duration - 1
       )
       if (today.isBefore(iterationStartDate)) {
         return false
@@ -156,10 +156,7 @@ function calcIterationBurndownPoints(items: ProjectV2Item[]) {
     }
     const points = item.pointField.number
     totalPoints += points
-    if (item.statusField === null) {
-      continue
-    }
-    if (item.statusField.name !== 'Done') {
+    if (item.statusField?.name !== 'Done') {
       remainingPoints += points
     }
   }

@@ -11,85 +11,11 @@ import * as github from '@actions/github'
 import { type GetProjectItemsQuery, run } from '../src/main'
 import { LocalDate } from '@js-joda/core'
 
-const GRAPHQL_RESPONSE: GetProjectItemsQuery = {
-  organization: {
-    projectV2: {
-      items: {
-        pageInfo: {
-          hasNextPage: false,
-          endCursor: 'Mw'
-        },
-        nodes: [
-          {
-            type: 'ISSUE',
-            pointField: {
-              number: 2
-            },
-            iterationField: {
-              iterationId: '1234abcd',
-              startDate: '2024-12-06',
-              duration: 14
-            },
-            statusField: {
-              name: 'In Progress'
-            }
-          },
-          {
-            type: 'ISSUE',
-            pointField: {
-              number: 3
-            },
-            iterationField: {
-              iterationId: '1234abcd',
-              startDate: '2024-12-06',
-              duration: 14
-            },
-            statusField: {
-              name: 'Done'
-            }
-          },
-          {
-            type: 'ISSUE',
-            pointField: null,
-            iterationField: {
-              iterationId: '1234abcd',
-              startDate: '2024-12-06',
-              duration: 14
-            },
-            statusField: {
-              name: 'Done'
-            }
-          },
-          {
-            type: 'PULL_REQUEST',
-            pointField: {
-              number: 3
-            },
-            iterationField: {
-              iterationId: '5678efgh',
-              startDate: '2024-12-20',
-              duration: 7
-            },
-            statusField: {
-              name: 'Done'
-            }
-          },
-          {
-            type: 'DRAFT_ISSUE',
-            pointField: {
-              number: 3
-            },
-            iterationField: null,
-            statusField: {
-              name: 'Product Backlog'
-            }
-          },
-          { type: 'REDACTED' }
-        ]
-      }
-    }
-  }
-}
+const ITERATION_2024_12_06 = {
+  iterationId: '1234abcd',
+  startDate: '2024-12-06',
+  duration: 14
+} as const
 
 describe('action', () => {
   let outputs: Record<string, string> = {}
@@ -114,8 +40,279 @@ describe('action', () => {
     jest.restoreAllMocks()
   })
 
+  describe.each([
+    '2024-12-06', // first day of sprint
+    '2024-12-07', // holiday
+    '2024-12-09', // next weekday
+    '2024-12-19' // last day
+  ])('with previous and next iteatation', (dateString) => {
+    it('does not count items outside the current iteration', async () => {
+      mockNow(LocalDate.parse(dateString))
+      stubGithubGraphql([
+        {
+          organization: {
+            projectV2: {
+              items: {
+                pageInfo: {
+                  hasNextPage: false,
+                  endCursor: 'Mw'
+                },
+                nodes: [
+                  {
+                    type: 'ISSUE',
+                    pointField: {
+                      number: 2
+                    },
+                    iterationField: {
+                      iterationId: '5678efgh',
+                      startDate: '2024-12-20', // next iteration
+                      duration: 7
+                    },
+                    statusField: {
+                      name: 'Done'
+                    }
+                  },
+                  {
+                    type: 'ISSUE',
+                    pointField: {
+                      number: 3
+                    },
+                    iterationField: ITERATION_2024_12_06,
+                    statusField: {
+                      name: 'Done'
+                    }
+                  },
+                  {
+                    type: 'ISSUE',
+                    pointField: {
+                      number: 8
+                    },
+                    iterationField: {
+                      iterationId: 'abcd1234',
+                      startDate: '2024-11-22', // previous iteration
+                      duration: 14
+                    },
+                    statusField: {
+                      name: 'Done'
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ])
+
+      await run()
+
+      expect(outputs['remaining-points']).toBe('0')
+      expect(outputs['total-points']).toBe('3')
+      expect(setFailedMock).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('with pagination', () => {
+    it('sums points from all pages', async () => {
+      mockNow(LocalDate.of(2024, 12, 10))
+      stubGithubGraphql([
+        {
+          organization: {
+            projectV2: {
+              items: {
+                pageInfo: {
+                  hasNextPage: true,
+                  endCursor: 'Mw'
+                },
+                nodes: [
+                  {
+                    type: 'ISSUE',
+                    pointField: {
+                      number: 2
+                    },
+                    iterationField: ITERATION_2024_12_06,
+                    statusField: {
+                      name: 'Done'
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          organization: {
+            projectV2: {
+              items: {
+                pageInfo: {
+                  hasNextPage: false,
+                  endCursor: 'Mm'
+                },
+                nodes: [
+                  {
+                    type: 'ISSUE',
+                    pointField: {
+                      number: 1
+                    },
+                    iterationField: ITERATION_2024_12_06,
+                    statusField: {
+                      name: 'In Progress'
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ])
+
+      await run()
+
+      expect(outputs['remaining-points']).toBe('1')
+      expect(outputs['total-points']).toBe('3')
+      expect(setFailedMock).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('with some null pointField', () => {
+    it('does not count items with null point', async () => {
+      stubGithubGraphql([
+        {
+          organization: {
+            projectV2: {
+              items: {
+                pageInfo: {
+                  hasNextPage: false,
+                  endCursor: 'Mw'
+                },
+                nodes: [
+                  {
+                    type: 'ISSUE',
+                    pointField: null,
+                    iterationField: ITERATION_2024_12_06,
+                    statusField: {
+                      name: 'Done'
+                    }
+                  },
+                  {
+                    type: 'ISSUE',
+                    pointField: {
+                      number: 3
+                    },
+                    iterationField: ITERATION_2024_12_06,
+                    statusField: {
+                      name: 'Done'
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ])
+
+      await run()
+
+      expect(outputs['remaining-points']).toBe('0')
+      expect(outputs['total-points']).toBe('3')
+      expect(setFailedMock).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('with some null iterationField', () => {
+    it('does not count items with null iteration', async () => {
+      stubGithubGraphql([
+        {
+          organization: {
+            projectV2: {
+              items: {
+                pageInfo: {
+                  hasNextPage: false,
+                  endCursor: 'Mw'
+                },
+                nodes: [
+                  {
+                    type: 'ISSUE',
+                    pointField: {
+                      number: 2
+                    },
+                    iterationField: null,
+                    statusField: {
+                      name: 'Done'
+                    }
+                  },
+                  {
+                    type: 'ISSUE',
+                    pointField: {
+                      number: 3
+                    },
+                    iterationField: ITERATION_2024_12_06,
+                    statusField: {
+                      name: 'Done'
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ])
+
+      await run()
+
+      expect(outputs['remaining-points']).toBe('0')
+      expect(outputs['total-points']).toBe('3')
+      expect(setFailedMock).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('with some null statusField', () => {
+    it('treats items with null status as remaining', async () => {
+      mockNow(LocalDate.of(2024, 12, 10))
+      stubGithubGraphql([
+        {
+          organization: {
+            projectV2: {
+              items: {
+                pageInfo: {
+                  hasNextPage: false,
+                  endCursor: 'Mw'
+                },
+                nodes: [
+                  {
+                    type: 'ISSUE',
+                    pointField: {
+                      number: 2
+                    },
+                    iterationField: ITERATION_2024_12_06,
+                    statusField: null
+                  },
+                  {
+                    type: 'ISSUE',
+                    pointField: {
+                      number: 3
+                    },
+                    iterationField: ITERATION_2024_12_06,
+                    statusField: {
+                      name: 'Done'
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ])
+
+      await run()
+
+      expect(outputs['remaining-points']).toBe('2')
+      expect(outputs['total-points']).toBe('5')
+      expect(setFailedMock).not.toHaveBeenCalled()
+    })
+  })
+
   describe('with empty items', () => {
-    it('sets output without fails', async () => {
+    it('sets zero points', async () => {
       stubGithubGraphql([
         {
           organization: {
@@ -140,28 +337,23 @@ describe('action', () => {
     })
   })
 
-  describe.each([
-    '2024-12-06', // first day of sprint
-    '2024-12-07', // holiday
-    '2024-12-09', // next weekday
-    '2024-12-19' // last day
-  ])('with some items in current sprint', (dateString) => {
-    it('sets output without fails on the first day', async () => {
-      mockNow(LocalDate.parse(dateString))
-      stubGithubGraphql([GRAPHQL_RESPONSE])
-
-      await run()
-
-      expect(outputs['remaining-points']).toBe('2')
-      expect(outputs['total-points']).toBe('5')
-      expect(setFailedMock).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('with 0 items in current sprint', () => {
-    it('sets output without fails', async () => {
-      mockNow(LocalDate.of(2024, 12, 5))
-      stubGithubGraphql([GRAPHQL_RESPONSE])
+  describe('with redacted items', () => {
+    it('does not count redacted items', async () => {
+      stubGithubGraphql([
+        {
+          organization: {
+            projectV2: {
+              items: {
+                pageInfo: {
+                  hasNextPage: false,
+                  endCursor: 'Mw'
+                },
+                nodes: [{ type: 'REDACTED' }]
+              }
+            }
+          }
+        }
+      ])
 
       await run()
 
@@ -171,80 +363,9 @@ describe('action', () => {
     })
   })
 
-  describe('with pagination', () => {
-    it('sets output without fails', async () => {
-      mockNow(LocalDate.of(2024, 12, 10))
-      stubGithubGraphql([
-        {
-          organization: {
-            projectV2: {
-              items: {
-                pageInfo: {
-                  hasNextPage: true,
-                  endCursor: 'Mw'
-                },
-                nodes: [
-                  {
-                    type: 'ISSUE',
-                    pointField: {
-                      number: 2
-                    },
-                    iterationField: {
-                      iterationId: '1234abcd',
-                      startDate: '2024-12-06',
-                      duration: 14
-                    },
-                    statusField: {
-                      name: 'Done'
-                    }
-                  }
-                ]
-              }
-            }
-          }
-        },
-        {
-          organization: {
-            projectV2: {
-              items: {
-                pageInfo: {
-                  hasNextPage: false,
-                  endCursor: 'Mm'
-                },
-                nodes: [
-                  {
-                    type: 'ISSUE',
-                    pointField: {
-                      number: 1
-                    },
-                    iterationField: {
-                      iterationId: '1234abcd',
-                      startDate: '2024-12-06',
-                      duration: 14
-                    },
-                    statusField: {
-                      name: 'In Progress'
-                    }
-                  }
-                ]
-              }
-            }
-          }
-        }
-      ])
-
-      await run()
-
-      expect(outputs['remaining-points']).toBe('1')
-      expect(outputs['total-points']).toBe('3')
-      expect(setFailedMock).not.toHaveBeenCalled()
-    })
-  })
-
   describe('with non-numeric project-number', () => {
     it('fails', async () => {
       dummyInputs['project-number'] = 'abc'
-      stubGithubGraphql([GRAPHQL_RESPONSE])
 
       await run()
 
@@ -255,7 +376,6 @@ describe('action', () => {
   describe('with empty point-field-name', () => {
     it('fails', async () => {
       dummyInputs['point-field-name'] = ''
-      stubGithubGraphql([GRAPHQL_RESPONSE])
 
       await run()
 
@@ -266,7 +386,6 @@ describe('action', () => {
   describe('with empty iteration-field-name', () => {
     it('fails', async () => {
       dummyInputs['iteration-field-name'] = ''
-      stubGithubGraphql([GRAPHQL_RESPONSE])
 
       await run()
 
@@ -277,7 +396,6 @@ describe('action', () => {
   describe('with empty status-field-name', () => {
     it('fails', async () => {
       dummyInputs['status-field-name'] = ''
-      stubGithubGraphql([GRAPHQL_RESPONSE])
 
       await run()
 

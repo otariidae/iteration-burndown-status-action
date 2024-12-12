@@ -40554,7 +40554,7 @@ function calcIterationBurndownPoints(items) {
             return false;
         }
         const iterationStartDate = core_1.LocalDate.parse(item.iterationField.startDate);
-        const iterationEndDate = iterationStartDate.plusDays(item.iterationField.duration);
+        const iterationEndDate = iterationStartDate.plusDays(item.iterationField.duration - 1);
         if (today.isBefore(iterationStartDate)) {
             return false;
         }
@@ -40572,10 +40572,7 @@ function calcIterationBurndownPoints(items) {
         }
         const points = item.pointField.number;
         totalPoints += points;
-        if (item.statusField === null) {
-            continue;
-        }
-        if (item.statusField.name !== 'Done') {
+        if (item.statusField?.name !== 'Done') {
             remainingPoints += points;
         }
     }
