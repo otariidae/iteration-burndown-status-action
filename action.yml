@@ -29,6 +29,9 @@ inputs:
     description: field name of status
     required: false
     default: 'Status'
+  grouping-field-name:
+    description: field name of grouping
+    required: false
 
 outputs:
   remaining-points:
@@ -36,6 +39,10 @@ outputs:
       sum of points of remaining project items in the current iteration
   total-points:
     description: sum of points of all project items in the current iteration
+  grouping-result:
+    description: |
+      a JSON object that contains the sum of points of remaining project items in the current iteration for each group
+      type: Record<string, { remainingPoints: number, totalPoints: number }>
 
 runs:
   using: node20

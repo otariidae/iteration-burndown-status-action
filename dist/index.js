@@ -40484,6 +40484,7 @@ const GetProjectItemsQuery = /* GraphQL */ `
     $pointFieldName: String!,
     $iterationFieldName: String!,
     $statusFieldName: String!,
+    $groupingFieldName: String!,
     $cursor: String
   ) {
     organization(login: $login) {
@@ -40509,6 +40510,11 @@ const GetProjectItemsQuery = /* GraphQL */ `
             }
             statusField: fieldValueByName(name: $statusFieldName) {
               ... on ProjectV2ItemFieldSingleSelectValue {
+                name
+              }
+            }
+            groupingField: fieldValueByName(name: $groupingFieldName) {
+              ...on ProjectV2ItemFieldSingleSelectValue {
                 name
               }
             }
@@ -40544,7 +40550,7 @@ async function arrayFromAsync(asyncIterable) {
 }
 function calcIterationBurndownPoints(items) {
     if (items.length === 0) {
-        return { remainingPoints: 0, totalPoints: 0 };
+        return { remainingPoints: 0, totalPoints: 0, groupingResult: new Map() };
     }
     const today = core_1.LocalDate.now();
     const currentIterationItems = items
@@ -40564,19 +40570,41 @@ function calcIterationBurndownPoints(items) {
         return true;
     });
     core.info(`Found ${currentIterationItems.length} items in the current iteration`);
-    let remainingPoints = 0;
-    let totalPoints = 0;
+    // sum up points for each grouping
+    const groupingResult = new Map();
     for (const item of currentIterationItems) {
         if (item.pointField === null) {
             continue;
         }
+        const groupName = item.groupingField?.name;
+        const group = groupingResult.get(groupName) ?? {
+            remainingPoints: 0,
+            totalPoints: 0
+        };
         const points = item.pointField.number;
-        totalPoints += points;
+        group.totalPoints += points;
         if (item.statusField?.name !== 'Done') {
-            remainingPoints += points;
+            group.remainingPoints += points;
         }
+        groupingResult.set(groupName, group);
     }
-    return { remainingPoints, totalPoints };
+    let remainingPoints = 0;
+    let totalPoints = 0;
+    for (const group of groupingResult.values()) {
+        remainingPoints += group.remainingPoints;
+        totalPoints += group.totalPoints;
+    }
+    return { remainingPoints, totalPoints, groupingResult };
+}
+function mapToObject(map) {
+    const obj = {};
+    for (const [key, value] of map.entries()) {
+        if (key === undefined) {
+            continue;
+        }
+        obj[key] = value;
+    }
+    return obj;
 }
 async function run() {
     try {
@@ -40586,6 +40614,7 @@ async function run() {
         const pointFieldName = core.getInput('point-field-name');
         const iterationFieldName = core.getInput('iteration-field-name');
         const statusFieldName = core.getInput('status-field-name');
+        const groupingFieldName = core.getInput('grouping-field-name');
         // validate inputs
         if (Number.isNaN(projectNumber)) {
             throw new Error('project-number must be a number');
@@ -40605,11 +40634,13 @@ async function run() {
             number: projectNumber,
             pointFieldName,
             iterationFieldName,
+            groupingFieldName,
             statusFieldName
         }));
-        const { remainingPoints, totalPoints } = await calcIterationBurndownPoints(items);
+        const { remainingPoints, totalPoints, groupingResult } = await calcIterationBurndownPoints(items);
         core.setOutput('remaining-points', remainingPoints.toString());
         core.setOutput('total-points', totalPoints.toString());
+        core.setOutput('grouping-results', JSON.stringify(mapToObject(groupingResult)));
     }
     catch (error) {
         // Fail the workflow run if an error occurs

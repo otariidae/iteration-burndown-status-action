@@ -12,6 +12,7 @@ type ProjectV2Item =
         duration: number
       } | null
       statusField: { name: string } | null
+      groupingField: { name: string } | null
     }
   | { type: 'REDACTED' }
 
@@ -36,6 +37,7 @@ const GetProjectItemsQuery = /* GraphQL */ `
     $pointFieldName: String!,
     $iterationFieldName: String!,
     $statusFieldName: String!,
+    $groupingFieldName: String!,
     $cursor: String
   ) {
     organization(login: $login) {
@@ -64,6 +66,11 @@ const GetProjectItemsQuery = /* GraphQL */ `
                 name
               }
             }
+            groupingField: fieldValueByName(name: $groupingFieldName) {
+              ...on ProjectV2ItemFieldSingleSelectValue {
+                name
+              }
+            }
           }
         }
       }
@@ -77,6 +84,7 @@ type GetProjectItemsQueryVariables = {
   pointFieldName: string
   iterationFieldName: string
   statusFieldName: string
+  groupingFieldName: string
   cursor?: string
 }
 
@@ -120,7 +128,7 @@ async function arrayFromAsync<T>(
 
 function calcIterationBurndownPoints(items: ProjectV2Item[]) {
   if (items.length === 0) {
-    return { remainingPoints: 0, totalPoints: 0 }
+    return { remainingPoints: 0, totalPoints: 0, groupingResult: new Map() }
   }
 
   const today = LocalDate.now()
@@ -148,19 +156,46 @@ function calcIterationBurndownPoints(items: ProjectV2Item[]) {
     `Found ${currentIterationItems.length} items in the current iteration`
   )
 
-  let remainingPoints = 0
-  let totalPoints = 0
+  // sum up points for each grouping
+  const groupingResult = new Map<
+    string | undefined,
+    { remainingPoints: number; totalPoints: number }
+  >()
   for (const item of currentIterationItems) {
     if (item.pointField === null) {
       continue
     }
-    const points = item.pointField.number
-    totalPoints += points
-    if (item.statusField?.name !== 'Done') {
-      remainingPoints += points
+    const groupName = item.groupingField?.name
+    const group = groupingResult.get(groupName) ?? {
+      remainingPoints: 0,
+      totalPoints: 0
     }
+    const points = item.pointField.number
+    group.totalPoints += points
+    if (item.statusField?.name !== 'Done') {
+      group.remainingPoints += points
+    }
+    groupingResult.set(groupName, group)
   }
-  return { remainingPoints, totalPoints }
+
+  let remainingPoints = 0
+  let totalPoints = 0
+  for (const group of groupingResult.values()) {
+    remainingPoints += group.remainingPoints
+    totalPoints += group.totalPoints
+  }
+  return { remainingPoints, totalPoints, groupingResult }
+}
+
+function mapToObject<K, V>(map: Map<K, V>): Record<string, V> {
+  const obj = {} as Record<string, V>
+  for (const [key, value] of map.entries()) {
+    if (key === undefined) {
+      continue
+    }
+    obj[key as unknown as string] = value
+  }
+  return obj
 }
 
 export async function run(): Promise<void> {
@@ -174,6 +209,7 @@ export async function run(): Promise<void> {
     const pointFieldName = core.getInput('point-field-name')
     const iterationFieldName = core.getInput('iteration-field-name')
     const statusFieldName = core.getInput('status-field-name')
+    const groupingFieldName = core.getInput('grouping-field-name')
 
     // validate inputs
     if (Number.isNaN(projectNumber)) {
@@ -196,14 +232,19 @@ export async function run(): Promise<void> {
         number: projectNumber,
         pointFieldName,
         iterationFieldName,
+        groupingFieldName,
         statusFieldName
       })
     )
 
-    const { remainingPoints, totalPoints } =
+    const { remainingPoints, totalPoints, groupingResult } =
       await calcIterationBurndownPoints(items)
     core.setOutput('remaining-points', remainingPoints.toString())
     core.setOutput('total-points', totalPoints.toString())
+    core.setOutput(
+      'grouping-results',
+      JSON.stringify(mapToObject(groupingResult))
+    )
   } catch (error) {
     // Fail the workflow run if an error occurs
     if (error instanceof Error) core.setFailed(error.message)
