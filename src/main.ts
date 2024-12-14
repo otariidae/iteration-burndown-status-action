@@ -126,7 +126,10 @@ async function arrayFromAsync<T>(
   return items
 }
 
-function calcIterationBurndownPoints(items: ProjectV2Item[]) {
+function calcIterationBurndownPoints(
+  items: ProjectV2Item[],
+  statusCompletedValue: string
+) {
   if (items.length === 0) {
     return { remainingPoints: 0, totalPoints: 0, groupingResult: new Map() }
   }
@@ -172,7 +175,7 @@ function calcIterationBurndownPoints(items: ProjectV2Item[]) {
     }
     const points = item.pointField.number
     group.totalPoints += points
-    if (item.statusField?.name !== 'Done') {
+    if (item.statusField?.name !== statusCompletedValue) {
       group.remainingPoints += points
     }
     groupingResult.set(groupName, group)
@@ -209,6 +212,7 @@ export async function run(): Promise<void> {
     const pointFieldName = core.getInput('point-field-name')
     const iterationFieldName = core.getInput('iteration-field-name')
     const statusFieldName = core.getInput('status-field-name')
+    const statusCompletedValue = core.getInput('status-completed-value')
     const groupingFieldName = core.getInput('grouping-field-name')
 
     // validate inputs
@@ -224,6 +228,9 @@ export async function run(): Promise<void> {
     if (statusFieldName === '') {
       throw new Error('status-field-name must not be empty')
     }
+    if (statusCompletedValue === '') {
+      throw new Error('status-completed-value must not be empty')
+    }
 
     const octokit = github.getOctokit(githubToken)
     const items = await arrayFromAsync(
@@ -238,7 +245,7 @@ export async function run(): Promise<void> {
     )
 
     const { remainingPoints, totalPoints, groupingResult } =
-      await calcIterationBurndownPoints(items)
+      await calcIterationBurndownPoints(items, statusCompletedValue)
     core.setOutput('remaining-points', remainingPoints.toString())
     core.setOutput('total-points', totalPoints.toString())
     core.setOutput(

@@ -32,6 +32,7 @@ describe('action', () => {
       'point-field-name': 'points',
       'iteration-field-name': 'Sprint',
       'status-field-name': 'Status',
+      'status-completed-value': 'Done',
       'grouping-field-name': ''
     }
     mockGetInput(dummyInputs)

@@ -40548,7 +40548,7 @@ async function arrayFromAsync(asyncIterable) {
     }
     return items;
 }
-function calcIterationBurndownPoints(items) {
+function calcIterationBurndownPoints(items, statusCompletedValue) {
     if (items.length === 0) {
         return { remainingPoints: 0, totalPoints: 0, groupingResult: new Map() };
     }
@@ -40583,7 +40583,7 @@ function calcIterationBurndownPoints(items) {
         };
         const points = item.pointField.number;
         group.totalPoints += points;
-        if (item.statusField?.name !== 'Done') {
+        if (item.statusField?.name !== statusCompletedValue) {
             group.remainingPoints += points;
         }
         groupingResult.set(groupName, group);
@@ -40614,6 +40614,7 @@ async function run() {
         const pointFieldName = core.getInput('point-field-name');
         const iterationFieldName = core.getInput('iteration-field-name');
         const statusFieldName = core.getInput('status-field-name');
+        const statusCompletedValue = core.getInput('status-completed-value');
         const groupingFieldName = core.getInput('grouping-field-name');
         // validate inputs
         if (Number.isNaN(projectNumber)) {
@@ -40628,6 +40629,9 @@ async function run() {
         if (statusFieldName === '') {
             throw new Error('status-field-name must not be empty');
         }
+        if (statusCompletedValue === '') {
+            throw new Error('status-completed-value must not be empty');
+        }
         const octokit = github.getOctokit(githubToken);
         const items = await arrayFromAsync(fetchAllProjectItems(octokit, {
             login: loginName,
@@ -40637,7 +40641,7 @@ async function run() {
             groupingFieldName,
             statusFieldName
         }));
-        const { remainingPoints, totalPoints, groupingResult } = await calcIterationBurndownPoints(items);
+        const { remainingPoints, totalPoints, groupingResult } = await calcIterationBurndownPoints(items, statusCompletedValue);
         core.setOutput('remaining-points', remainingPoints.toString());
         core.setOutput('total-points', totalPoints.toString());
         core.setOutput('grouping-results', JSON.stringify(mapToObject(groupingResult)));
