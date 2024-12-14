@@ -29,6 +29,10 @@ inputs:
     description: field name of status
     required: false
     default: 'Status'
+  status-completed-value:
+    description: value of status that represents completed
+    required: false
+    default: 'Done'
   grouping-field-name:
     description: field name of grouping
     required: false
