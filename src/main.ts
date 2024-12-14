@@ -201,36 +201,54 @@ function mapToObject<K, V>(map: Map<K, V>): Record<string, V> {
   return obj
 }
 
+type GetInputOptions = core.InputOptions & {
+  presence?: boolean
+  integerity?: boolean
+}
+
+// return number if integerity is true, otherwise return string
+function getInput(
+  name: string,
+  options: GetInputOptions & { integerity: true }
+): number
+function getInput(
+  name: string,
+  options?: GetInputOptions & { integerity?: false }
+): string
+
+// a thin wrapper of core.getInput with validation
+function getInput(name: string, options?: GetInputOptions): string | number {
+  const value = core.getInput(name, options)
+  if (options?.presence && value === '') {
+    throw new Error(`${name} must not be empty`)
+  }
+  if (options?.integerity) {
+    const valueAsInt = Number.parseInt(value, 10)
+    if (Number.isNaN(valueAsInt)) {
+      throw new Error(`${name} must be an integer`)
+    }
+    return valueAsInt
+  }
+  return value
+}
+
 export async function run(): Promise<void> {
   try {
-    const githubToken = core.getInput('github-token', { required: true })
-    const loginName = core.getInput('login-name', { required: true })
-    const projectNumber = Number.parseInt(
-      core.getInput('project-number', { required: true }),
-      10
-    )
-    const pointFieldName = core.getInput('point-field-name')
-    const iterationFieldName = core.getInput('iteration-field-name')
-    const statusFieldName = core.getInput('status-field-name')
-    const statusCompletedValue = core.getInput('status-completed-value')
-    const groupingFieldName = core.getInput('grouping-field-name')
-
-    // validate inputs
-    if (Number.isNaN(projectNumber)) {
-      throw new Error('project-number must be a number')
-    }
-    if (pointFieldName === '') {
-      throw new Error('point-field-name must not be empty')
-    }
-    if (iterationFieldName === '') {
-      throw new Error('iteration-field-name must not be empty')
-    }
-    if (statusFieldName === '') {
-      throw new Error('status-field-name must not be empty')
-    }
-    if (statusCompletedValue === '') {
-      throw new Error('status-completed-value must not be empty')
-    }
+    const githubToken = getInput('github-token', { required: true })
+    const loginName = getInput('login-name', { required: true })
+    const projectNumber = getInput('project-number', {
+      required: true,
+      integerity: true
+    })
+    const pointFieldName = getInput('point-field-name', { presence: true })
+    const iterationFieldName = getInput('iteration-field-name', {
+      presence: true
+    })
+    const statusFieldName = getInput('status-field-name', { presence: true })
+    const statusCompletedValue = getInput('status-completed-value', {
+      presence: true
+    })
+    const groupingFieldName = getInput('grouping-field-name')
 
     const octokit = github.getOctokit(githubToken)
     const items = await arrayFromAsync(
