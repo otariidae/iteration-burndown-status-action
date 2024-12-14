@@ -20,17 +20,14 @@
     "node": ">=21"
   },
   "scripts": {
-    "bundle": "npm run format:write && npm run package",
-    "ci-test": "npx jest",
-    "coverage": "npx make-coverage-badge --output-path ./badges/coverage.svg",
-    "format:write": "biome format --write",
-    "format:check": "biome format",
-    "lint": "biome lint",
-    "local-action": "npx local-action . src/main.ts .env",
-    "package": "npx ncc build src/index.ts -o dist --source-map --license licenses.txt",
+    "coverage": "make-coverage-badge --output-path ./badges/coverage.svg",
+    "check": "biome check",
+    "check:fix": "biome check --fix --unsafe",
+    "local-action": "local-action . src/main.ts .env",
+    "package": "ncc build src/index.ts -o dist --source-map --license licenses.txt",
     "package:watch": "npm run package -- --watch",
-    "test": "npx jest",
-    "all": "npm run format:write && npm run lint && npm run test && npm run coverage && npm run package"
+    "test": "jest",
+    "all": "npm run check && npm run test && npm run coverage && npm run package"
   },
   "license": "MIT",
   "jest": {
