@@ -8,8 +8,8 @@
 
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import { type GetProjectItemsQuery, run } from '../src/main'
 import { LocalDate } from '@js-joda/core'
+import { type GetProjectItemsQuery, run } from '../src/main'
 
 const ITERATION_2024_12_06 = {
   iterationId: '1234abcd',

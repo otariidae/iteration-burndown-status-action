@@ -126,17 +126,9 @@ async function arrayFromAsync<T>(
   return items
 }
 
-function calcIterationBurndownPoints(
-  items: ProjectV2Item[],
-  statusCompletedValue: string
-) {
-  if (items.length === 0) {
-    return { remainingPoints: 0, totalPoints: 0, groupingResult: new Map() }
-  }
-
+function filterCurrentIterationItems(items: ProjectV2Item[]) {
   const today = LocalDate.now()
-
-  const currentIterationItems = items
+  return items
     .filter((item) => item.type !== 'REDACTED')
     .filter((item) => {
       if (item.iterationField === null) {
@@ -146,14 +138,22 @@ function calcIterationBurndownPoints(
       const iterationEndDate = iterationStartDate.plusDays(
         item.iterationField.duration - 1
       )
-      if (today.isBefore(iterationStartDate)) {
-        return false
-      }
-      if (today.isAfter(iterationEndDate)) {
-        return false
-      }
-      return true
+      // return false if today is before the start date or after the end date
+      return (
+        !today.isBefore(iterationStartDate) && !today.isAfter(iterationEndDate)
+      )
     })
+}
+
+function calcIterationBurndownPoints(
+  items: ProjectV2Item[],
+  statusCompletedValue: string
+) {
+  if (items.length === 0) {
+    return { remainingPoints: 0, totalPoints: 0, groupingResult: new Map() }
+  }
+
+  const currentIterationItems = filterCurrentIterationItems(items)
 
   core.info(
     `Found ${currentIterationItems.length} items in the current iteration`
