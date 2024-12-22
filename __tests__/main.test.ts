@@ -23,7 +23,7 @@ import { type GetProjectItemsQuery, run } from '../src/main'
 const ITERATION_2024_12_06 = {
   iterationId: '1234abcd',
   startDate: '2024-12-06',
-  duration: 14
+  duration: 7
 } as const
 
 describe('action', () => {
@@ -52,78 +52,86 @@ describe('action', () => {
   })
 
   describe.each([
-    '2024-12-06', // first day of sprint
-    '2024-12-07', // holiday
-    '2024-12-09', // next weekday
-    '2024-12-19' // last day
-  ])('with previous and next iteatation', (dateString) => {
-    it('does not count items outside the current iteration', async () => {
-      mockNow(LocalDate.parse(dateString))
-      stubGithubGraphql([
-        {
-          organization: {
-            projectV2: {
-              items: {
-                pageInfo: {
-                  hasNextPage: false,
-                  endCursor: 'Mw'
-                },
-                nodes: [
-                  {
-                    type: 'ISSUE',
-                    pointField: {
-                      number: 2
-                    },
-                    iterationField: {
-                      iterationId: '5678efgh',
-                      startDate: '2024-12-20', // next iteration
-                      duration: 7
-                    },
-                    statusField: {
-                      name: 'Done'
-                    },
-                    groupingField: null
+    ['2024-12-06', 5], // first day of sprint
+    ['2024-12-08', 4], // holiday
+    ['2024-12-09', 4], // next weekday
+    ['2024-12-12', 1] // last day
+  ])(
+    'with previous and next iteatation (%s)',
+    (dateString, expectedIdealPoint) => {
+      it('does not count items outside the current iteration', async () => {
+        mockNow(LocalDate.parse(dateString))
+        stubGithubGraphql([
+          {
+            organization: {
+              projectV2: {
+                items: {
+                  pageInfo: {
+                    hasNextPage: false,
+                    endCursor: 'Mw'
                   },
-                  {
-                    type: 'ISSUE',
-                    pointField: {
-                      number: 3
+                  nodes: [
+                    {
+                      type: 'ISSUE',
+                      pointField: {
+                        number: 2
+                      },
+                      iterationField: {
+                        iterationId: '5678efgh',
+                        startDate: '2024-12-13', // next iteration
+                        duration: 7
+                      },
+                      statusField: {
+                        name: 'Done'
+                      },
+                      groupingField: null
                     },
-                    iterationField: ITERATION_2024_12_06,
-                    statusField: {
-                      name: 'Done'
+                    {
+                      type: 'ISSUE',
+                      pointField: {
+                        number: 5
+                      },
+                      iterationField: ITERATION_2024_12_06,
+                      statusField: {
+                        name: 'Done'
+                      },
+                      groupingField: null
                     },
-                    groupingField: null
-                  },
-                  {
-                    type: 'ISSUE',
-                    pointField: {
-                      number: 8
-                    },
-                    iterationField: {
-                      iterationId: 'abcd1234',
-                      startDate: '2024-11-22', // previous iteration
-                      duration: 14
-                    },
-                    statusField: {
-                      name: 'Done'
-                    },
-                    groupingField: null
-                  }
-                ]
+                    {
+                      type: 'ISSUE',
+                      pointField: {
+                        number: 8
+                      },
+                      iterationField: {
+                        iterationId: 'abcd1234',
+                        startDate: '2024-11-22', // previous iteration
+                        duration: 14
+                      },
+                      statusField: {
+                        name: 'Done'
+                      },
+                      groupingField: null
+                    }
+                  ]
+                }
               }
             }
           }
-        }
-      ])
+        ])
 
-      await run()
+        await run()
 
-      expect(outputs['remaining-points']).toBe('0')
-      expect(outputs['total-points']).toBe('3')
-      expect(setFailedMock).not.toHaveBeenCalled()
-    })
-  })
+        expect(outputs['remaining-points']).toBe('0')
+        expect(outputs['total-points']).toBe('5')
+        expect(outputs['remaining-business-days']).toBe(
+          expectedIdealPoint.toString()
+        )
+        expect(outputs['total-business-days']).toBe('5')
+        expect(outputs['grouping-results']).toBe('{}')
+        expect(setFailedMock).not.toHaveBeenCalled()
+      })
+    }
+  )
 
   describe('with pagination', () => {
     it('sums points from all pages', async () => {
@@ -185,6 +193,9 @@ describe('action', () => {
 
       expect(outputs['remaining-points']).toBe('1')
       expect(outputs['total-points']).toBe('3')
+      expect(outputs['remaining-business-days']).toBe('3')
+      expect(outputs['total-business-days']).toBe('5')
+      expect(outputs['grouping-results']).toBe('{}')
       expect(setFailedMock).not.toHaveBeenCalled()
     })
   })
@@ -233,6 +244,9 @@ describe('action', () => {
 
       expect(outputs['remaining-points']).toBe('0')
       expect(outputs['total-points']).toBe('3')
+      expect(outputs['remaining-business-days']).toBe('3')
+      expect(outputs['total-business-days']).toBe('5')
+      expect(outputs['grouping-results']).toBe('{}')
       expect(setFailedMock).not.toHaveBeenCalled()
     })
   })
@@ -283,6 +297,8 @@ describe('action', () => {
 
       expect(outputs['remaining-points']).toBe('0')
       expect(outputs['total-points']).toBe('3')
+      expect(outputs['remaining-business-days']).toBe('3')
+      expect(outputs['total-business-days']).toBe('5')
       expect(outputs['grouping-results']).toBe('{}')
       expect(setFailedMock).not.toHaveBeenCalled()
     })
@@ -332,6 +348,8 @@ describe('action', () => {
 
       expect(outputs['remaining-points']).toBe('2')
       expect(outputs['total-points']).toBe('5')
+      expect(outputs['remaining-business-days']).toBe('3')
+      expect(outputs['total-business-days']).toBe('5')
       expect(outputs['grouping-results']).toBe('{}')
       expect(setFailedMock).not.toHaveBeenCalled()
     })
@@ -401,6 +419,8 @@ describe('action', () => {
 
       expect(outputs['remaining-points']).toBe('2')
       expect(outputs['total-points']).toBe('12')
+      expect(outputs['remaining-business-days']).toBe('3')
+      expect(outputs['total-business-days']).toBe('5')
       expect(outputs['grouping-results']).toBe(
         JSON.stringify({
           Epic1: { remainingPoints: 2, totalPoints: 9 },
@@ -459,6 +479,8 @@ describe('action', () => {
 
         expect(outputs['remaining-points']).toBe('3')
         expect(outputs['total-points']).toBe('5')
+        expect(outputs['remaining-business-days']).toBe('3')
+        expect(outputs['total-business-days']).toBe('5')
         expect(outputs['grouping-results']).toBe(
           JSON.stringify({
             Epic1: { remainingPoints: 0, totalPoints: 2 }
@@ -491,6 +513,8 @@ describe('action', () => {
 
       expect(outputs['remaining-points']).toBe('0')
       expect(outputs['total-points']).toBe('0')
+      expect(outputs['remaining-business-days']).toBe('0')
+      expect(outputs['total-business-days']).toBe('0')
       expect(outputs['grouping-results']).toBe('{}')
       expect(setFailedMock).not.toHaveBeenCalled()
     })
@@ -518,6 +542,8 @@ describe('action', () => {
 
       expect(outputs['remaining-points']).toBe('0')
       expect(outputs['total-points']).toBe('0')
+      expect(outputs['remaining-business-days']).toBe('0')
+      expect(outputs['total-business-days']).toBe('0')
       expect(outputs['grouping-results']).toBe('{}')
       expect(setFailedMock).not.toHaveBeenCalled()
     })

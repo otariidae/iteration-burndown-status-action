@@ -1,6 +1,8 @@
+import assert from 'node:assert/strict'
 import * as core from '@actions/core'
 import * as github from '@actions/github'
 import { LocalDate } from '@js-joda/core'
+import { durationInBusinessDays } from './util'
 
 type ProjectV2Item =
   | {
@@ -67,7 +69,7 @@ const GetProjectItemsQuery = /* GraphQL */ `
               }
             }
             groupingField: fieldValueByName(name: $groupingFieldName) {
-              ...on ProjectV2ItemFieldSingleSelectValue {
+              ... on ProjectV2ItemFieldSingleSelectValue {
                 name
               }
             }
@@ -145,19 +147,36 @@ function filterCurrentIterationItems(items: ProjectV2Item[]) {
     })
 }
 
+type BurndownStatus = {
+  remainingPoints: number
+  totalPoints: number
+  remainingBusinessDays: number
+  totalBusinessDays: number
+  groupingResult: Map<
+    string | undefined,
+    { remainingPoints: number; totalPoints: number }
+  >
+}
+
 function calcIterationBurndownPoints(
   items: ProjectV2Item[],
   statusCompletedValue: string
-) {
-  if (items.length === 0) {
-    return { remainingPoints: 0, totalPoints: 0, groupingResult: new Map() }
-  }
-
+): BurndownStatus {
   const currentIterationItems = filterCurrentIterationItems(items)
 
   core.info(
     `Found ${currentIterationItems.length} items in the current iteration`
   )
+
+  if (currentIterationItems.length === 0) {
+    return {
+      remainingPoints: 0,
+      totalPoints: 0,
+      remainingBusinessDays: 0,
+      totalBusinessDays: 0,
+      groupingResult: new Map()
+    }
+  }
 
   // sum up points for each grouping
   const groupingResult = new Map<
@@ -187,7 +206,28 @@ function calcIterationBurndownPoints(
     remainingPoints += group.remainingPoints
     totalPoints += group.totalPoints
   }
-  return { remainingPoints, totalPoints, groupingResult }
+
+  const iterationField = currentIterationItems[0].iterationField
+  assert(iterationField !== null)
+
+  const iterationStartDate = LocalDate.parse(iterationField.startDate)
+  const iterationEndDate = iterationStartDate.plusDays(
+    iterationField.duration - 1
+  )
+  const totalBusinessDays = durationInBusinessDays(
+    iterationStartDate,
+    iterationEndDate
+  )
+  const today = LocalDate.now()
+  const remainingBusinessDays = durationInBusinessDays(today, iterationEndDate)
+
+  return {
+    remainingPoints,
+    totalPoints,
+    totalBusinessDays,
+    remainingBusinessDays,
+    groupingResult
+  }
 }
 
 function mapToObject<K, V>(map: Map<K, V>): Record<string, V> {
@@ -262,15 +302,23 @@ export async function run(): Promise<void> {
       })
     )
 
-    const { remainingPoints, totalPoints, groupingResult } =
-      await calcIterationBurndownPoints(items, statusCompletedValue)
+    const {
+      remainingPoints,
+      totalPoints,
+      remainingBusinessDays,
+      totalBusinessDays,
+      groupingResult
+    } = await calcIterationBurndownPoints(items, statusCompletedValue)
     core.setOutput('remaining-points', remainingPoints.toString())
     core.setOutput('total-points', totalPoints.toString())
+    core.setOutput('remaining-business-days', remainingBusinessDays.toString())
+    core.setOutput('total-business-days', totalBusinessDays.toString())
     core.setOutput(
       'grouping-results',
       JSON.stringify(mapToObject(groupingResult))
     )
   } catch (error) {
+    console.debug(error)
     // Fail the workflow run if an error occurs
     if (error instanceof Error) core.setFailed(error.message)
   }
