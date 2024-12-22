@@ -9,6 +9,15 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
 import { LocalDate } from '@js-joda/core'
+import {
+  type MockInstance,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi
+} from 'vitest'
 import { type GetProjectItemsQuery, run } from '../src/main'
 
 const ITERATION_2024_12_06 = {
@@ -20,11 +29,11 @@ const ITERATION_2024_12_06 = {
 describe('action', () => {
   let outputs: Record<string, string> = {}
   let dummyInputs: Record<string, string> = {}
-  let setFailedMock: jest.SpiedFunction<typeof core.setFailed>
+  let setFailedMock: MockInstance<typeof core.setFailed>
 
   beforeEach(() => {
     outputs = mockSetOutput()
-    setFailedMock = jest.spyOn(core, 'setFailed')
+    setFailedMock = vi.spyOn(core, 'setFailed')
     dummyInputs = {
       'github-token': 'dummy',
       'login-name': 'octocat',
@@ -39,7 +48,7 @@ describe('action', () => {
   })
 
   afterEach(() => {
-    jest.restoreAllMocks()
+    vi.restoreAllMocks()
   })
 
   describe.each([
@@ -558,14 +567,14 @@ describe('action', () => {
 
 function mockSetOutput(): Record<string, string> {
   const dummyOutputs: Record<string, string> = {}
-  jest.spyOn(core, 'setOutput').mockImplementation((name, value) => {
+  vi.spyOn(core, 'setOutput').mockImplementation((name, value) => {
     dummyOutputs[name] = value
   })
   return dummyOutputs
 }
 
 function mockGetInput(inputs: Record<string, string>) {
-  jest.spyOn(core, 'getInput').mockImplementation((name: string) => {
+  vi.spyOn(core, 'getInput').mockImplementation((name: string) => {
     if (inputs[name] === undefined) {
       throw new Error(`Unexpected input name: ${name}`)
     }
@@ -574,16 +583,16 @@ function mockGetInput(inputs: Record<string, string>) {
 }
 
 function mockNow(date: LocalDate) {
-  jest.spyOn(LocalDate, 'now').mockReturnValue(date)
+  vi.spyOn(LocalDate, 'now').mockReturnValue(date)
 }
 
 function stubGithubGraphql(responses: GetProjectItemsQuery[]) {
-  let mockOctokitGraphql = jest.fn()
+  let mockOctokitGraphql = vi.fn()
   for (const response of responses) {
     mockOctokitGraphql = mockOctokitGraphql.mockReturnValueOnce(response)
   }
 
-  jest.spyOn(github, 'getOctokit').mockReturnValue({
+  vi.spyOn(github, 'getOctokit').mockReturnValue({
     graphql: mockOctokitGraphql
   } as unknown as ReturnType<typeof github.getOctokit>)
 }
