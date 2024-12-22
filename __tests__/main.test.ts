@@ -182,6 +182,7 @@ describe('action', () => {
 
   describe('with some null pointField', () => {
     it('does not count items with null point', async () => {
+      mockNow(LocalDate.of(2024, 12, 10))
       stubGithubGraphql([
         {
           organization: {
@@ -229,6 +230,7 @@ describe('action', () => {
 
   describe('with some null iterationField', () => {
     it('does not count items with null iteration', async () => {
+      mockNow(LocalDate.of(2024, 12, 10))
       stubGithubGraphql([
         {
           organization: {
