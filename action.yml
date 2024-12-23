@@ -47,7 +47,7 @@ outputs:
     description: remaining business days in the current iteration
   total-business-days:
     description: total business days in the current iteration
-  grouping-result:
+  grouping-results:
     description: |
       a JSON object that contains the sum of points of remaining project items in the current iteration for each group
       type: Record<string, { remainingPoints: number, totalPoints: number }>
