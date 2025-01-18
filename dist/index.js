@@ -16712,7 +16712,7 @@ module.exports = holidays;
 /***/ 7095:
 /***/ (function(__unused_webpack_module, exports) {
 
-//! @version @js-joda/core - 5.6.3
+//! @version @js-joda/core - 5.6.4
 //! @copyright (c) 2015-present, Philipp Thürwächter, Pattrick Hüper & js-joda contributors
 //! @copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos
 //! @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
@@ -16839,10 +16839,10 @@ module.exports = holidays;
 
     var assert$1 = /*#__PURE__*/Object.freeze({
         __proto__: null,
+        abstractMethodFail: abstractMethodFail,
         assert: assert,
-        requireNonNull: requireNonNull,
         requireInstance: requireInstance,
-        abstractMethodFail: abstractMethodFail
+        requireNonNull: requireNonNull
     });
 
     /**
@@ -16947,7 +16947,11 @@ module.exports = holidays;
         if (isNaN(value)) {
           throw new ArithmeticException('Invalid int value, using NaN as argument');
         }
-        if (value % 1 !== 0) {
+        if (Number.isInteger) {
+          if (!Number.isInteger(Number(value))) {
+            throw new ArithmeticException("Invalid value: '" + value + "' is a float");
+          }
+        } else if (value % 1 !== 0) {
           throw new ArithmeticException("Invalid value: '" + value + "' is a float");
         }
         if (value > MAX_SAFE_INTEGER || value < MIN_SAFE_INTEGER) {
@@ -17021,6 +17025,7 @@ module.exports = holidays;
      * @copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos
      * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
      */
+
     var TemporalAmount = function () {
       function TemporalAmount() {}
       var _proto = TemporalAmount.prototype;
@@ -17052,6 +17057,7 @@ module.exports = holidays;
      * @copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos
      * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
      */
+
     var TemporalUnit = function () {
       function TemporalUnit() {}
       var _proto = TemporalUnit.prototype;
@@ -17646,6 +17652,7 @@ module.exports = holidays;
      * @copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos
      * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
      */
+
     var ValueRange = function () {
       function ValueRange(minSmallest, minLargest, maxSmallest, maxLargest) {
         assert(!(minSmallest > minLargest), "Smallest minimum value '" + minSmallest + "' must be less than largest minimum value '" + minLargest + "'", IllegalArgumentException);
@@ -17869,6 +17876,7 @@ module.exports = holidays;
      * @copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos
      * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
      */
+
     var TemporalAccessor = function () {
       function TemporalAccessor() {}
       var _proto = TemporalAccessor.prototype;
@@ -18788,6 +18796,7 @@ module.exports = holidays;
      * @copyright (c) 2016, Philipp Thürwächter & Pattrick Hüper
      * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
      */
+
     var StringUtil = function () {
       function StringUtil() {}
       StringUtil.startsWith = function startsWith(text, pattern) {
@@ -18814,6 +18823,7 @@ module.exports = holidays;
      * @copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos
      * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
      */
+
     var ZoneId = function () {
       function ZoneId() {}
       ZoneId.systemDefault = function systemDefault() {
@@ -19721,6 +19731,7 @@ module.exports = holidays;
      * @copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos
      * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
      */
+
     var DateTimePrintContext = function () {
       function DateTimePrintContext(temporal, localeOrFormatter, symbols) {
         if (arguments.length === 2 && arguments[1] instanceof DateTimeFormatter) {
@@ -20356,6 +20367,7 @@ module.exports = holidays;
      * @copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos
      * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
      */
+
     var CharLiteralPrinterParser = function () {
       function CharLiteralPrinterParser(literal) {
         if (literal.length > 1) {
@@ -20469,6 +20481,7 @@ module.exports = holidays;
      * @copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos
      * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
      */
+
     var FractionPrinterParser = function () {
       function FractionPrinterParser(field, minWidth, maxWidth, decimalPoint) {
         requireNonNull(field, 'field');
@@ -20852,6 +20865,7 @@ module.exports = holidays;
      * @copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos
      * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
      */
+
     var PATTERNS = ['+HH', '+HHmm', '+HH:mm', '+HHMM', '+HH:MM', '+HHMMss', '+HH:MM:ss', '+HHMMSS', '+HH:MM:SS'];
     var OffsetIdPrinterParser = function () {
       function OffsetIdPrinterParser(noOffsetText, pattern) {
@@ -20970,6 +20984,7 @@ module.exports = holidays;
      * @copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos
      * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
      */
+
     var PadPrinterParserDecorator = function () {
       function PadPrinterParserDecorator(printerParser, padWidth, padChar) {
         this._printerParser = printerParser;
@@ -21073,6 +21088,7 @@ module.exports = holidays;
      * @copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos
      * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
      */
+
     var StringLiteralPrinterParser = function () {
       function StringLiteralPrinterParser(literal) {
         this._literal = literal;
@@ -21102,6 +21118,7 @@ module.exports = holidays;
      * @copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos
      * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
      */
+
     var ZoneRulesProvider = function () {
       function ZoneRulesProvider() {}
       ZoneRulesProvider.getRules = function getRules(zoneId) {
@@ -21141,6 +21158,7 @@ module.exports = holidays;
      * @copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos
      * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
      */
+
     var ZoneIdPrinterParser = function () {
       function ZoneIdPrinterParser(query, description) {
         this.query = query;
@@ -21293,6 +21311,7 @@ module.exports = holidays;
      * @copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos
      * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
      */
+
     var MAX_WIDTH = 15;
     var DateTimeFormatterBuilder = function () {
       function DateTimeFormatterBuilder() {
@@ -22049,6 +22068,7 @@ module.exports = holidays;
      * @copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos
      * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
      */
+
     var DateTimeFormatter = function () {
       DateTimeFormatter.parsedExcessDays = function parsedExcessDays() {
         return DateTimeFormatter.PARSED_EXCESS_DAYS;
@@ -23046,6 +23066,7 @@ module.exports = holidays;
      * @copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos
      * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
      */
+
     var TemporalAdjuster = function () {
       function TemporalAdjuster() {}
       var _proto = TemporalAdjuster.prototype;
@@ -26710,6 +26731,7 @@ module.exports = holidays;
      * @copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos
      * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
      */
+
     var ZoneOffsetTransition = function () {
       ZoneOffsetTransition.of = function of(transition, offsetBefore, offsetAfter) {
         return new ZoneOffsetTransition(transition, offsetBefore, offsetAfter);
@@ -26800,6 +26822,7 @@ module.exports = holidays;
      * @copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos
      * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
      */
+
     function _init$1() {
       TemporalQueries.ZONE_ID = createTemporalQuery('ZONE_ID', function (temporal) {
         return temporal.query(TemporalQueries.ZONE_ID);
@@ -26933,6 +26956,7 @@ module.exports = holidays;
      * @copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos
      * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
      */
+
     var ZoneIdFactory = function () {
       function ZoneIdFactory() {}
       ZoneIdFactory.systemDefault = function systemDefault() {
@@ -27015,6 +27039,7 @@ module.exports = holidays;
      * @copyright (c) 2016, Philipp Thürwächter & Pattrick Hüper
      * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
      */
+
     var isInit = false;
     function init() {
       if (isInit) {
@@ -27052,6 +27077,7 @@ module.exports = holidays;
      * @copyright (c) 2016, Philipp Thürwächter & Pattrick Hüper
      * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
      */
+
     var ToNativeJsConverter = function () {
       function ToNativeJsConverter(temporal, zone) {
         var zonedDateTime;
@@ -27092,6 +27118,7 @@ module.exports = holidays;
      * @copyright (c) 2015-present, Philipp Thürwächter, Pattrick Hüper & js-joda contributors
      * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
      */
+
     function nativeJs(date, zone) {
       if (zone === void 0) {
         zone = ZoneId.systemDefault();
@@ -27121,6 +27148,7 @@ module.exports = holidays;
      * @copyright (c) 2016, Philipp Thürwächter & Pattrick Hüper
      * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
      */
+
     var _ = {
       assert: assert$1,
       DateTimeBuilder: DateTimeBuilder,
