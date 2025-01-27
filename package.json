@@ -25,12 +25,12 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
-    "@github/local-action": "^2.2.1",
-    "@types/node": "^22.10.5",
+    "@github/local-action": "^2.5.1",
+    "@types/node": "^22.10.10",
     "@vercel/ncc": "^0.38.3",
     "@vitest/coverage-istanbul": "^2.1.8",
     "make-coverage-badge": "^1.2.0",
-    "typescript": "^5.7.2",
+    "typescript": "^5.7.3",
     "vitest": "^2.1.8"
   }
 }
