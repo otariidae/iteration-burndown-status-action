@@ -8,13 +8,14 @@ on:
         description: "tag"
         required: true
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   release:
     timeout-minutes: 30
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
