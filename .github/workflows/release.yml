@@ -28,7 +28,9 @@ jobs:
       # ^ this action creates a branch named "release-${{inputs.tag}}"
       - name: tag
         run: |
-          sha=$(git rev-parse "release-${{inputs.tag}}")
+          branch="release-${{inputs.tag}}"
+          git fetch origin "$branch"
+          sha=$(git rev-parse "origin/$branch")
           git tag -a ${{inputs.tag}} "$sha"
           git push origin ${{inputs.tag}}
-          git push origin --delete "release-${{inputs.tag}}"
+          git push origin --delete "$branch"
