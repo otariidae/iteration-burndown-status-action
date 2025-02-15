@@ -25,3 +25,10 @@ jobs:
       - uses: suzuki-shunsuke/release-js-action@v0.1.4
         with:
           version: ${{inputs.tag}}
+      # ^ this action creates a branch named "release-${{inputs.tag}}"
+      - name: tag
+        run: |
+          sha=$(git rev-parse "release-${{inputs.tag}}")
+          git tag -a ${{inputs.tag}} $sha
+          git push origin ${{inputs.tag}}
+          git push origin --delete "release-${{inputs.tag}}"
