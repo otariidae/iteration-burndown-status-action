@@ -34,3 +34,4 @@ jobs:
           git tag -a ${{inputs.tag}} "$sha"
           git push origin ${{inputs.tag}}
           git push origin --delete "$branch"
+        shell: bash -euo pipefail {0}
