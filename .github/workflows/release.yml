@@ -28,6 +28,8 @@ jobs:
       # ^ this action creates a branch named "release-${{inputs.tag}}"
       - name: tag
         run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           branch="release-${{inputs.tag}}"
           git fetch origin "$branch"
           sha=$(git rev-parse "origin/$branch")
