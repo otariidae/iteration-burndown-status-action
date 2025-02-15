@@ -1,0 +1,27 @@
+name: Release
+run-name: Release ${{inputs.tag}}
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "tag"
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: npm ci
+      - run: npm run all
+      - uses: suzuki-shunsuke/release-js-action@v0.1.4
+        with:
+          version: ${{inputs.tag}}
