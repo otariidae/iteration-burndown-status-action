@@ -18,8 +18,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
       - run: npm ci
       - run: npm run all
       - uses: suzuki-shunsuke/release-js-action@v0.1.4
