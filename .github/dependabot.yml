@@ -23,7 +23,7 @@ updates:
       vitest:
         patterns:
           - vitest
-          - @vitest/*
+          - "@vitest/*"
       npm-production:
         dependency-type: production
         update-types:
