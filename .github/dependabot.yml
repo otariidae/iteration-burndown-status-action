@@ -20,6 +20,10 @@ updates:
         update-types:
           - minor
           - patch
+      vitest:
+        patterns:
+          - vitest
+          - @vitest/*
       npm-production:
         dependency-type: production
         update-types:
