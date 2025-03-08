@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: npm ci
       - run: npm run all
-      - uses: suzuki-shunsuke/release-js-action@v0.1.4
+      - uses: suzuki-shunsuke/release-js-action@v0.1.5
         with:
           version: ${{inputs.tag}}
       # ^ this action creates a branch named "release-${{inputs.tag}}"
