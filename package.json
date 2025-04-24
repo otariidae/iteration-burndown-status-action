@@ -24,11 +24,11 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
-    "@types/node": "^22.10.10",
+    "@types/node": "^22.14.1",
     "@vercel/ncc": "^0.38.3",
-    "@vitest/coverage-istanbul": "^3.0.5",
+    "@vitest/coverage-istanbul": "^3.1.2",
     "make-coverage-badge": "^1.2.0",
-    "typescript": "^5.7.3",
+    "typescript": "^5.8.3",
     "vitest": "^3.0.5"
   }
 }
