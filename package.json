@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
-    "@types/node": "^22.15.9",
+    "@types/node": "^24.0.3",
     "@vercel/ncc": "^0.38.3",
     "@vitest/coverage-istanbul": "^3.2.3",
     "make-coverage-badge": "^1.2.0",
